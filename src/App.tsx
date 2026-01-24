@@ -78,10 +78,13 @@ function App() {
                 @{telegramUser.username}
               </span>
             )}
-            {isAdmin && (
-              <span className="mt-2 font-mono text-[10px] text-white/40">
-                WebApp {webAppStatus.available ? 'on' : 'off'} · invoice{' '}
-                {webAppStatus.openInvoice ? 'on' : 'off'} · {webAppStatus.platform}
+            <span className="mt-2 font-mono text-[10px] text-white/40">
+              WebApp {webAppStatus.available ? 'on' : 'off'} · invoice{' '}
+              {webAppStatus.openInvoice ? 'on' : 'off'} · {webAppStatus.platform}
+            </span>
+            {telegramUser?.id && (
+              <span className="mt-1 font-mono text-[10px] text-white/30">
+                id:{telegramUser.id}
               </span>
             )}
           </div>
@@ -247,7 +250,7 @@ function DiagnosticWizard({
 
     if (webApp?.openLink) {
       webApp.openLink(invoiceLink)
-      setError('Открыл ссылку через Telegram. Если окно не появилось, открой WebApp снова.')
+      setError('Ссылка открыта через Telegram. Если окно не появилось, открой WebApp снова.')
       setUnlocking(false)
       return
     }
@@ -387,7 +390,7 @@ function DiagnosticWizard({
           </button>
         </div>
       )}
-      {isAdmin && !webAppStatus.available && (
+      {!webAppStatus.available && (
         <div className="mt-3 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200">
           WebApp не обнаружен. Открой приложение через кнопку бота, не через браузер.
         </div>
