@@ -52,6 +52,11 @@ function App() {
           </div>
           <div className="flex flex-col items-end text-right text-xs text-white/60">
             <span className="rounded-full border border-white/10 px-3 py-1">Beta</span>
+            {isAdmin && (
+              <span className="mt-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-amber-200">
+                Admin
+              </span>
+            )}
             {telegramUser?.username && (
               <span className="mt-2 font-mono text-[11px] text-white/40">
                 @{telegramUser.username}
@@ -429,16 +434,17 @@ function ResultNode({
               Доступ открыт {isAdmin ? 'админом' : 'по оплате'}.
             </p>
           )}
-          {isAdmin && (
-            <button
-              onClick={onTestInvoice}
-              disabled={unlocking}
-              className="mt-3 w-full rounded-xl border border-amber-300/40 bg-transparent px-4 py-3 text-xs font-semibold text-amber-100"
-            >
-              {unlocking ? 'Открываю счет...' : 'Тест оплаты (админ)'}
-            </button>
-          )}
         </div>
+      )}
+
+      {isAdmin && (
+        <button
+          onClick={onTestInvoice}
+          disabled={unlocking}
+          className="mt-4 w-full rounded-xl border border-amber-300/40 bg-transparent px-4 py-3 text-xs font-semibold text-amber-100"
+        >
+          {unlocking ? 'Открываю счет...' : 'Тест оплаты (админ)'}
+        </button>
       )}
 
       <div className="mt-6 grid gap-3">
