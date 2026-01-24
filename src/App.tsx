@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import {
-  diagnosticTree,
+import { diagnosticTree } from './data/diagnosticTree'
+import type {
   DiagnosticNode,
   DiagnosticQuestion,
   DiagnosticResult,
 } from './data/diagnosticTree'
 import { config } from './lib/config'
 import { createStarsInvoice } from './lib/payments'
-import { getTelegramUser, initTelegram, TelegramUser } from './lib/telegram'
+import { getTelegramUser, initTelegram } from './lib/telegram'
+import type { TelegramUser } from './lib/telegram'
 
 type View = 'home' | 'wizard'
 
