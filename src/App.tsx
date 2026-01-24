@@ -114,8 +114,8 @@ function App() {
             Ответь на 5–7 вопросов. Алгоритм даст диагноз и точечную рекомендацию.
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="pill">60 секунд</span>
-            <span className="pill">Без воды</span>
+            <span className="pill text-white">60 секунд</span>
+            <span className="pill text-white">Без воды</span>
           </div>
         </div>
 

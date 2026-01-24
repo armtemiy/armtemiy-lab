@@ -52,6 +52,24 @@ npm run dev
 В репозитории настроен GitHub Actions workflow.
 После пуша в `main` автоматически соберется и задеплоится Pages.
 
+## Бот (aiogram)
+
+Папка: `bot/`
+
+Запуск локально:
+
+```
+python -m venv bot/.venv
+bot/.venv/Scripts/pip install -r bot/requirements.txt
+copy bot/.env.example bot/.env
+bot/.venv/Scripts/python bot/main.py
+```
+
+Переменные:
+
+- `BOT_TOKEN`
+- `WEBAPP_URL`
+
 ## Важно
 
 Никогда не коммить секретные ключи или токен бота.
