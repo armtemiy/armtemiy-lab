@@ -117,6 +117,7 @@ function App() {
                 onUnlock={() => setPremiumUnlocked(true)}
                 isAdmin={isAdmin}
                 telegramUserId={telegramUser?.id ?? null}
+                telegramUsername={telegramUser?.username ?? null}
               />
             </motion.div>
           )}
@@ -132,12 +133,14 @@ function DiagnosticWizard({
   onUnlock,
   isAdmin,
   telegramUserId,
+  telegramUsername,
 }: {
   canAccessPremium: boolean
   onExit: () => void
   onUnlock: () => void
   isAdmin: boolean
   telegramUserId: string | null
+  telegramUsername: string | null
 }) {
   const [currentId, setCurrentId] = useState(diagnosticTree.start)
   const [history, setHistory] = useState<string[]>([])
@@ -267,7 +270,7 @@ function DiagnosticWizard({
           .upsert(
             {
               telegram_user_id: telegramUserId,
-              username: telegramUser?.username ?? null,
+              username: telegramUsername,
               is_admin: isAdmin,
             },
             { onConflict: 'telegram_user_id' },
@@ -289,7 +292,7 @@ function DiagnosticWizard({
     }
 
     void saveResult()
-  }, [answers, isAdmin, node, saved, telegramUserId, telegramUser?.username])
+  }, [answers, isAdmin, node, saved, telegramUserId, telegramUsername])
 
   return (
     <div className={`${cardStyle} p-5`}>
