@@ -7,6 +7,7 @@ export const config = {
     .split(',')
     .map((item: string) => item.trim())
     .filter(Boolean),
+  botUsername: import.meta.env.VITE_BOT_USERNAME || '',
   starsItemSlug: 'premium-branch',
   starsPrice: 1,
 }

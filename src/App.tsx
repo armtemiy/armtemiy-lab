@@ -17,6 +17,7 @@ type WebAppStatus = {
   available: boolean
   openInvoice: boolean
   platform: string
+  launchParams: boolean
 }
 
 const fadeUp = {
@@ -36,16 +37,19 @@ function App() {
     available: false,
     openInvoice: false,
     platform: 'unknown',
+    launchParams: false,
   })
 
   useEffect(() => {
     initTelegram()
     setTelegramUser(getTelegramUser())
     const webApp = (window as any)?.Telegram?.WebApp
+    const hasLaunchParams = new URLSearchParams(window.location.search).has('tgWebAppData')
     setWebAppStatus({
       available: Boolean(webApp),
       openInvoice: Boolean(webApp?.openInvoice),
       platform: webApp?.platform || 'unknown',
+      launchParams: hasLaunchParams,
     })
   }, [])
 
@@ -81,6 +85,7 @@ function App() {
             <span className="mt-2 font-mono text-[10px] text-white/40">
               WebApp {webAppStatus.available ? 'on' : 'off'} · invoice{' '}
               {webAppStatus.openInvoice ? 'on' : 'off'} · {webAppStatus.platform}
+              {webAppStatus.launchParams ? ' · params' : ''}
             </span>
             {telegramUser?.id && (
               <span className="mt-1 font-mono text-[10px] text-white/30">
@@ -392,7 +397,15 @@ function DiagnosticWizard({
       )}
       {!webAppStatus.available && (
         <div className="mt-3 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200">
-          WebApp не обнаружен. Открой приложение через кнопку бота, не через браузер.
+          WebApp не обнаружен. Открой приложение через кнопку бота.
+          {config.botUsername && (
+            <a
+              className="mt-3 inline-flex w-full items-center justify-center rounded-xl border border-red-400/40 bg-red-500/10 px-3 py-2 text-[11px] font-semibold text-red-100"
+              href={`https://t.me/${config.botUsername}?startapp=lab`}
+            >
+              Открыть в Telegram
+            </a>
+          )}
         </div>
       )}
     </div>
