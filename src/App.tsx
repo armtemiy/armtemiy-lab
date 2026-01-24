@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
+import type { ChangeEvent } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { diagnosticTree } from './data/diagnosticTree'
 import type {
   DiagnosticNode,
   DiagnosticQuestion,
   DiagnosticResult,
+  DiagnosticTree,
 } from './data/diagnosticTree'
 import { config } from './lib/config'
 import { createStarsInvoice } from './lib/payments'
@@ -12,13 +14,15 @@ import { supabase } from './lib/supabase'
 import { getTelegramUser, initTelegram } from './lib/telegram'
 import type { TelegramUser } from './lib/telegram'
 
-type View = 'home' | 'wizard'
+type View = 'home' | 'wizard' | 'anthro' | 'counter' | 'admin'
 type WebAppStatus = {
   available: boolean
   openInvoice: boolean
   platform: string
   launchParams: boolean
 }
+
+const treeStorageKey = 'armtemiy_lab_tree_override'
 
 const fadeUp = {
   initial: { opacity: 0, y: 18 },
@@ -33,6 +37,8 @@ function App() {
   const [view, setView] = useState<View>('home')
   const [telegramUser, setTelegramUser] = useState<TelegramUser | null>(null)
   const [premiumUnlocked, setPremiumUnlocked] = useState(false)
+  const [tree, setTree] = useState<DiagnosticTree>(diagnosticTree)
+  const [treeSource, setTreeSource] = useState<'default' | 'override'>('default')
   const [webAppStatus, setWebAppStatus] = useState<WebAppStatus>({
     available: false,
     openInvoice: false,
@@ -52,6 +58,19 @@ function App() {
       platform: webApp?.platform || 'unknown',
       launchParams: hasLaunchParams,
     })
+
+    const stored = localStorage.getItem(treeStorageKey)
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored) as DiagnosticTree
+        if (parsed?.start && parsed?.nodes) {
+          setTree(parsed)
+          setTreeSource('override')
+        }
+      } catch {
+        localStorage.removeItem(treeStorageKey)
+      }
+    }
   }, [])
 
   const isAdmin = telegramUser?.id ? config.adminIds.includes(telegramUser.id) : false
@@ -111,43 +130,55 @@ function App() {
         </div>
 
         <AnimatePresence mode="wait">
-          {view === 'home' ? (
+          {view === 'home' && (
             <motion.div key="home" {...fadeUp} className="flex flex-col gap-4">
-              <button
-                className="w-full rounded-2xl bg-amber-400 px-6 py-4 text-sm font-semibold text-black shadow-[0_12px_24px_rgba(245,158,11,0.25)]"
-                onClick={() => setView('wizard')}
-              >
-                Запустить диагностику
-              </button>
-
               <div className={`${cardStyle} p-5`}>
-                <p className="text-sm text-white/70">Модули (скоро)</p>
+                <p className="text-sm text-white/70">Модули</p>
                 <div className="mt-4 grid gap-3">
-                  <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                    <p className="text-sm font-medium">Антропометрия</p>
-                    <p className="text-xs text-white/50">
-                      Определит твой базовый стиль по рычагам.
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                    <p className="text-sm font-medium">Контр-матрица</p>
-                    <p className="text-xs text-white/50">
-                      Быстрый подбор контр-приема.
-                    </p>
-                  </div>
+                  <ModuleCard
+                    title="Диагностика поражения"
+                    description="Пошаговый разбор на 60 секунд."
+                    actionLabel="Запустить"
+                    onAction={() => setView('wizard')}
+                  />
+                  <ModuleCard
+                    title="Антропометрия"
+                    description="Подбор базового стиля по рычагам."
+                    actionLabel="Открыть"
+                    onAction={() => setView('anthro')}
+                  />
+                  <ModuleCard
+                    title="Контр-матрица"
+                    description="Быстрый подбор контр-приема."
+                    actionLabel="Открыть"
+                    onAction={() => setView('counter')}
+                  />
+                  {isAdmin && (
+                    <ModuleCard
+                      title="Админ: Логика"
+                      description="Загрузка и экспорт дерева решений."
+                      actionLabel="Открыть"
+                      onAction={() => setView('admin')}
+                    />
+                  )}
                 </div>
               </div>
 
               <div className={`${cardStyle} p-5`}>
-                <p className="text-sm text-white/70">Режим доступа</p>
+                <p className="text-sm text-white/70">Статус логики</p>
                 <p className="mt-2 text-xs text-white/50">
-                  Админ-доступ включен для {config.adminIds.length} ID.
+                  Дерево: {treeSource === 'override' ? 'кастомное' : 'по умолчанию'} · Узлов: {
+                    Object.keys(tree.nodes).length
+                  }
                 </p>
               </div>
             </motion.div>
-          ) : (
+          )}
+
+          {view === 'wizard' && (
             <motion.div key="wizard" {...fadeUp}>
               <DiagnosticWizard
+                tree={tree}
                 canAccessPremium={canAccessPremium}
                 onExit={() => setView('home')}
                 onUnlock={() => setPremiumUnlocked(true)}
@@ -158,6 +189,38 @@ function App() {
               />
             </motion.div>
           )}
+
+          {view === 'anthro' && (
+            <motion.div key="anthro" {...fadeUp}>
+              <AnthroModule onExit={() => setView('home')} />
+            </motion.div>
+          )}
+
+          {view === 'counter' && (
+            <motion.div key="counter" {...fadeUp}>
+              <CounterModule onExit={() => setView('home')} />
+            </motion.div>
+          )}
+
+          {view === 'admin' && isAdmin && (
+            <motion.div key="admin" {...fadeUp}>
+              <AdminModule
+                tree={tree}
+                treeSource={treeSource}
+                onExit={() => setView('home')}
+                onApply={(nextTree) => {
+                  setTree(nextTree)
+                  setTreeSource('override')
+                  localStorage.setItem(treeStorageKey, JSON.stringify(nextTree))
+                }}
+                onReset={() => {
+                  setTree(diagnosticTree)
+                  setTreeSource('default')
+                  localStorage.removeItem(treeStorageKey)
+                }}
+              />
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
     </div>
@@ -165,6 +228,7 @@ function App() {
 }
 
 function DiagnosticWizard({
+  tree,
   canAccessPremium,
   onExit,
   onUnlock,
@@ -173,6 +237,7 @@ function DiagnosticWizard({
   telegramUsername,
   webAppStatus,
 }: {
+  tree: DiagnosticTree
   canAccessPremium: boolean
   onExit: () => void
   onUnlock: () => void
@@ -181,7 +246,7 @@ function DiagnosticWizard({
   telegramUsername: string | null
   webAppStatus: WebAppStatus
 }) {
-  const [currentId, setCurrentId] = useState(diagnosticTree.start)
+  const [currentId, setCurrentId] = useState(tree.start)
   const [history, setHistory] = useState<string[]>([])
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [unlocking, setUnlocking] = useState(false)
@@ -189,11 +254,19 @@ function DiagnosticWizard({
   const [saved, setSaved] = useState(false)
   const [fallbackInvoiceLink, setFallbackInvoiceLink] = useState<string | null>(null)
 
-  const node = diagnosticTree.nodes[currentId] as DiagnosticNode
+  useEffect(() => {
+    setCurrentId(tree.start)
+    setHistory([])
+    setAnswers({})
+    setError(null)
+    setSaved(false)
+    setFallbackInvoiceLink(null)
+  }, [tree])
+
+  const node = tree.nodes[currentId] as DiagnosticNode
   const totalQuestions = useMemo(
-    () =>
-      Object.values(diagnosticTree.nodes).filter((item) => item.type === 'question').length,
-    [],
+    () => Object.values(tree.nodes).filter((item) => item.type === 'question').length,
+    [tree.nodes],
   )
   const answeredCount = Object.keys(answers).length
   const progress = Math.min(answeredCount / totalQuestions, 1)
@@ -221,7 +294,7 @@ function DiagnosticWizard({
   }
 
   const handleRestart = () => {
-    setCurrentId(diagnosticTree.start)
+    setCurrentId(tree.start)
     setHistory([])
     setAnswers({})
     setError(null)
@@ -332,14 +405,14 @@ function DiagnosticWizard({
         user_id: userId,
         tree_id: null,
         answers_json: answers,
-        result_json: node,
+        result_json: { ...node, treeId: tree.id },
       })
 
       setSaved(true)
     }
 
     void saveResult()
-  }, [answers, isAdmin, node, saved, telegramUserId, telegramUsername])
+  }, [answers, isAdmin, node, saved, telegramUserId, telegramUsername, tree.id])
 
   return (
     <div className={`${cardStyle} p-5`}>
@@ -407,6 +480,298 @@ function DiagnosticWizard({
               Открыть в Telegram
             </a>
           )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ModuleCard({
+  title,
+  description,
+  actionLabel,
+  onAction,
+}: {
+  title: string
+  description: string
+  actionLabel: string
+  onAction: () => void
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
+      <p className="text-sm font-medium">{title}</p>
+      <p className="mt-1 text-xs text-white/50">{description}</p>
+      <button
+        onClick={onAction}
+        className="mt-3 w-full rounded-xl bg-white px-4 py-2 text-xs font-semibold text-black"
+      >
+        {actionLabel}
+      </button>
+    </div>
+  )
+}
+
+function InputRow({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <label className="grid gap-2 text-xs text-white/60">
+      {label}
+      <input
+        type="number"
+        inputMode="decimal"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80"
+      />
+    </label>
+  )
+}
+
+function AnthroModule({ onExit }: { onExit: () => void }) {
+  const [forearm, setForearm] = useState('')
+  const [palm, setPalm] = useState('')
+  const [wrist, setWrist] = useState('')
+
+  const result = useMemo(() => {
+    const forearmValue = Number(forearm)
+    const palmValue = Number(palm)
+    const wristValue = Number(wrist)
+
+    if (!forearmValue || !palmValue || !wristValue) return null
+
+    let toproll = 0
+    let hook = 0
+    let press = 0
+
+    if (forearmValue >= 30) toproll += 2
+    if (forearmValue < 28) hook += 1
+    if (palmValue >= 10.5) toproll += 1
+    if (palmValue < 10) hook += 1
+    if (wristValue >= 18) hook += 2
+    if (wristValue >= 19) press += 1
+    if (wristValue < 16.5) toproll += 1
+
+    const maxScore = Math.max(toproll, hook, press)
+    if (maxScore === press) {
+      return {
+        style: 'Пресс',
+        note: 'Короткая дистанция и жесткий локоть дают шанс на пресс.',
+      }
+    }
+
+    if (maxScore === hook) {
+      return {
+        style: 'Крюк',
+        note: 'Жесткая кисть и плотный рычаг — сильная сторона.',
+      }
+    }
+
+    return {
+      style: 'Верх (Toproll)',
+      note: 'Длина рычага и пальцы дают преимущество в верхе.',
+    }
+  }, [forearm, palm, wrist])
+
+  return (
+    <div className={`${cardStyle} p-5`}>
+      <div className="flex items-center justify-between">
+        <button className="text-xs text-white/60" onClick={onExit}>
+          ← назад
+        </button>
+        <p className="text-[11px] uppercase tracking-[0.3em] text-white/40">Антропометрия</p>
+      </div>
+
+      <p className="mt-4 text-sm text-white/70">
+        Черновой расчет. Дальше будет заменен на экспертную модель.
+      </p>
+
+      <div className="mt-4 grid gap-3">
+        <InputRow label="Длина предплечья (см)" value={forearm} onChange={setForearm} />
+        <InputRow label="Длина ладони (см)" value={palm} onChange={setPalm} />
+        <InputRow label="Обхват запястья (см)" value={wrist} onChange={setWrist} />
+      </div>
+
+      <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
+        <p className="text-xs uppercase tracking-[0.3em] text-white/40">Результат</p>
+        {result ? (
+          <>
+            <p className="mt-2 text-lg font-semibold">{result.style}</p>
+            <p className="mt-2 text-xs text-white/60">{result.note}</p>
+          </>
+        ) : (
+          <p className="mt-2 text-xs text-white/50">Заполни все поля, чтобы получить подсказку.</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function CounterModule({ onExit }: { onExit: () => void }) {
+  const [opponent, setOpponent] = useState<'Верх' | 'Крюк' | 'Пресс' | null>(null)
+
+  const counterMap = {
+    Верх: {
+      counter: 'Крюк',
+      note: 'Задави супинацией, не дай развернуть кисть.',
+    },
+    Крюк: {
+      counter: 'Пресс',
+      note: 'Уходи вниз, перекрывай плечо и ломай бицепс.',
+    },
+    Пресс: {
+      counter: 'Верх',
+      note: 'Атакуй пальцы и высоту, чтобы сорвать пресс.',
+    },
+  } as const
+
+  return (
+    <div className={`${cardStyle} p-5`}>
+      <div className="flex items-center justify-between">
+        <button className="text-xs text-white/60" onClick={onExit}>
+          ← назад
+        </button>
+        <p className="text-[11px] uppercase tracking-[0.3em] text-white/40">Контр-матрица</p>
+      </div>
+
+      <p className="mt-4 text-sm text-white/70">Выбери стиль соперника.</p>
+
+      <div className="mt-4 grid gap-2">
+        {(['Верх', 'Крюк', 'Пресс'] as const).map((style) => (
+          <button
+            key={style}
+            onClick={() => setOpponent(style)}
+            className={`rounded-2xl border px-4 py-3 text-sm transition ${
+              opponent === style
+                ? 'border-amber-400/60 bg-amber-400/10'
+                : 'border-white/10 bg-white/5'
+            }`}
+          >
+            {style}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
+        <p className="text-xs uppercase tracking-[0.3em] text-white/40">Контр</p>
+        {opponent ? (
+          <>
+            <p className="mt-2 text-lg font-semibold">{counterMap[opponent].counter}</p>
+            <p className="mt-2 text-xs text-white/60">{counterMap[opponent].note}</p>
+          </>
+        ) : (
+          <p className="mt-2 text-xs text-white/50">Выбери стиль, чтобы получить ответ.</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function AdminModule({
+  tree,
+  treeSource,
+  onExit,
+  onApply,
+  onReset,
+}: {
+  tree: DiagnosticTree
+  treeSource: 'default' | 'override'
+  onExit: () => void
+  onApply: (tree: DiagnosticTree) => void
+  onReset: () => void
+}) {
+  const [jsonInput, setJsonInput] = useState('')
+  const [status, setStatus] = useState<string | null>(null)
+
+  const handleApply = () => {
+    setStatus(null)
+    try {
+      const parsed = JSON.parse(jsonInput) as DiagnosticTree
+      if (!parsed?.start || !parsed?.nodes) {
+        setStatus('Неверный JSON: нет start или nodes')
+        return
+      }
+      onApply(parsed)
+      setStatus('Загружено успешно')
+    } catch {
+      setStatus('Ошибка разбора JSON')
+    }
+  }
+
+  const handleFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    const text = await file.text()
+    setJsonInput(text)
+  }
+
+  const handleExport = () => {
+    const blob = new Blob([JSON.stringify(tree, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${tree.id || 'tree'}.json`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  return (
+    <div className={`${cardStyle} p-5`}>
+      <div className="flex items-center justify-between">
+        <button className="text-xs text-white/60" onClick={onExit}>
+          ← назад
+        </button>
+        <p className="text-[11px] uppercase tracking-[0.3em] text-white/40">Админ: Логика</p>
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-white/60">
+        Источник: {treeSource === 'override' ? 'кастомный JSON' : 'по умолчанию'} · Узлов:{' '}
+        {Object.keys(tree.nodes).length}
+      </div>
+
+      <div className="mt-4 grid gap-3">
+        <input
+          type="file"
+          accept="application/json"
+          onChange={handleFile}
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-white/70"
+        />
+        <textarea
+          rows={8}
+          value={jsonInput}
+          onChange={(event) => setJsonInput(event.target.value)}
+          placeholder="Вставь JSON дерева решений"
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-white/70"
+        />
+        <button
+          onClick={handleApply}
+          className="w-full rounded-xl bg-amber-400 px-4 py-3 text-xs font-semibold text-black"
+        >
+          Применить JSON
+        </button>
+        <button
+          onClick={handleExport}
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-white/80"
+        >
+          Экспорт текущего JSON
+        </button>
+        <button
+          onClick={onReset}
+          className="w-full rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-xs text-red-200"
+        >
+          Сбросить на дефолт
+        </button>
+      </div>
+
+      {status && (
+        <div className="mt-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
+          {status}
         </div>
       )}
     </div>
