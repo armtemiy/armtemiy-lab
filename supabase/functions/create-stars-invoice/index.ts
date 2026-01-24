@@ -28,10 +28,10 @@ Deno.serve(async (req) => {
       })
     }
 
-    const supabaseUrl = getEnv('SUPABASE_URL')
-    const supabaseKey = getEnv('SUPABASE_SERVICE_ROLE_KEY')
-    const botToken = getEnv('TELEGRAM_BOT_TOKEN')
-    const providerToken = getEnv('TELEGRAM_PROVIDER_TOKEN')
+    const supabaseUrl = getEnv('SB_URL')
+    const supabaseKey = getEnv('SB_SERVICE_ROLE_KEY')
+    const botToken = getEnv('TG_BOT_TOKEN')
+    const providerToken = getEnv('TG_PROVIDER_TOKEN')
 
     if (!supabaseUrl || !supabaseKey || !botToken) {
       return new Response(JSON.stringify({ error: 'Missing env' }), {

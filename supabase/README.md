@@ -10,10 +10,10 @@
 
 Перед деплоем добавь секреты в Supabase:
 
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `TELEGRAM_BOT_TOKEN`
-- `TELEGRAM_PROVIDER_TOKEN` (опционально)
+- `SB_URL`
+- `SB_SERVICE_ROLE_KEY`
+- `TG_BOT_TOKEN`
+- `TG_PROVIDER_TOKEN` (опционально)
 
 ### Деплой через CLI
 
