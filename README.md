@@ -2,6 +2,13 @@
 
 Telegram Mini App (TMA) для тактической диагностики поражений в армрестлинге.
 
+## Модули
+
+- Диагностика поражения (основной).
+- Антропометрия (черновой калькулятор стиля).
+- Контр-матрица (верх > крюк, крюк > пресс, пресс > верх).
+- Админ: загрузка/экспорт JSON дерева (локально, через `localStorage`).
+
 ## Запуск локально
 
 1. Скопируй `.env.example` в `.env` и заполни значения.
@@ -22,6 +29,18 @@ npm run dev
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 - `VITE_ADMIN_IDS` (через запятую)
+- `VITE_BOT_USERNAME` (username бота для открытия WebApp)
+
+## Шаблон дерева логики
+
+Готовый шаблон JSON находится в `assets/diagnostic-template.json`.
+Его можно загрузить через админ-модуль или использовать как основу.
+
+## Supabase
+
+- Схема: `supabase/schema.sql`
+- Миграция: `supabase/migrations/*.sql`
+- Таблица результатов: `diagnostic_results`
 
 ## Деплой на GitHub Pages
 

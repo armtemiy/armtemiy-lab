@@ -1,44 +1,28 @@
-import { useEffect, useMemo, useState } from 'react'
-import type { ChangeEvent } from 'react'
+import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { diagnosticTree } from './data/diagnosticTree'
-import type {
-  DiagnosticNode,
-  DiagnosticQuestion,
-  DiagnosticResult,
-  DiagnosticTree,
-} from './data/diagnosticTree'
+import type { DiagnosticTree } from './data/diagnosticTree'
 import { config } from './lib/config'
-import { createStarsInvoice } from './lib/payments'
-import { supabase } from './lib/supabase'
 import { getTelegramUser, initTelegram } from './lib/telegram'
 import type { TelegramUser } from './lib/telegram'
+import { ModuleCard } from './components/ModuleCard'
+import { AdminModule } from './modules/AdminModule'
+import { AnthroModule } from './modules/AnthroModule'
+import { CounterModule } from './modules/CounterModule'
+import { DiagnosticWizard } from './modules/DiagnosticWizard'
+import type { TreeSource, WebAppStatus } from './types'
+import { fadeUp } from './ui'
 
 type View = 'home' | 'wizard' | 'anthro' | 'counter' | 'admin'
-type WebAppStatus = {
-  available: boolean
-  openInvoice: boolean
-  platform: string
-  launchParams: boolean
-}
 
 const treeStorageKey = 'armtemiy_lab_tree_override'
-
-const fadeUp = {
-  initial: { opacity: 0, y: 18 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.35 } },
-  exit: { opacity: 0, y: -10, transition: { duration: 0.2 } },
-}
-
-const cardStyle =
-  'rounded-3xl border border-white/10 bg-[rgba(17,24,39,0.75)] backdrop-blur-xl shadow-[0_20px_60px_rgba(0,0,0,0.35)]'
 
 function App() {
   const [view, setView] = useState<View>('home')
   const [telegramUser, setTelegramUser] = useState<TelegramUser | null>(null)
   const [premiumUnlocked, setPremiumUnlocked] = useState(false)
   const [tree, setTree] = useState<DiagnosticTree>(diagnosticTree)
-  const [treeSource, setTreeSource] = useState<'default' | 'override'>('default')
+  const [treeSource, setTreeSource] = useState<TreeSource>('default')
   const [webAppStatus, setWebAppStatus] = useState<WebAppStatus>({
     available: false,
     openInvoice: false,
@@ -48,7 +32,9 @@ function App() {
 
   useEffect(() => {
     initTelegram()
-    setTelegramUser(getTelegramUser())
+    const user = getTelegramUser()
+    setTelegramUser(user)
+
     const webApp = (window as any)?.Telegram?.WebApp
     const params = new URLSearchParams(window.location.search)
     const hasLaunchParams = Array.from(params.keys()).some((key) => key.startsWith('tgWebApp'))
@@ -58,6 +44,20 @@ function App() {
       platform: webApp?.platform || 'unknown',
       launchParams: hasLaunchParams,
     })
+
+    const applyTheme = (nextScheme?: string) => {
+      const fallback = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+      const scheme = nextScheme === 'light' || nextScheme === 'dark' ? nextScheme : fallback
+      document.documentElement.dataset.theme = scheme
+    }
+
+    applyTheme(webApp?.colorScheme)
+
+    if (webApp?.onEvent) {
+      webApp.onEvent('themeChanged', () => {
+        applyTheme(webApp?.colorScheme)
+      })
+    }
 
     const stored = localStorage.getItem(treeStorageKey)
     if (stored) {
@@ -77,63 +77,53 @@ function App() {
   const canAccessPremium = isAdmin || premiumUnlocked
 
   return (
-    <div className="min-h-screen px-4 pb-16 pt-6 text-white">
+    <div className="min-h-screen px-4 pb-16 pt-6">
       <div className="mx-auto flex w-full max-w-md flex-col gap-6">
         <header className="flex items-start justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.4em] text-[#fbbf24]/70">
-              Armtemiy Lab
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold leading-tight">
+            <p className="text-xs uppercase tracking-[0.4em] text-faint">Armtemiy Lab</p>
+            <h1 className="mt-2 text-3xl font-semibold text-[color:var(--text-primary)]">
               Тактический
               <br />
               разбор поражения
             </h1>
           </div>
-          <div className="flex flex-col items-end text-right text-xs text-white/60">
-            <span className="rounded-full border border-white/10 px-3 py-1">Beta</span>
+          <div className="flex flex-col items-end text-right text-xs">
+            <span className="pill">Beta</span>
             {isAdmin && (
-              <span className="mt-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-amber-200">
+              <span className="mt-2 rounded-full border border-[color:var(--accent)]/40 bg-[color:var(--accent)]/10 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-[color:var(--accent-contrast)]">
                 Admin
               </span>
             )}
             {telegramUser?.username && (
-              <span className="mt-2 font-mono text-[11px] text-white/40">
-                @{telegramUser.username}
-              </span>
+              <span className="mt-2 font-mono text-[11px] text-faint">@{telegramUser.username}</span>
             )}
-            <span className="mt-2 font-mono text-[10px] text-white/40">
+            <span className="mt-2 font-mono text-[10px] text-faint">
               WebApp {webAppStatus.available ? 'on' : 'off'} · invoice{' '}
               {webAppStatus.openInvoice ? 'on' : 'off'} · {webAppStatus.platform}
               {webAppStatus.launchParams ? ' · params' : ''}
             </span>
             {telegramUser?.id && (
-              <span className="mt-1 font-mono text-[10px] text-white/30">
-                id:{telegramUser.id}
-              </span>
+              <span className="mt-1 font-mono text-[10px] text-faint">id:{telegramUser.id}</span>
             )}
           </div>
         </header>
 
-        <div className="rounded-3xl border border-amber-400/30 bg-gradient-to-br from-amber-400/15 via-transparent to-transparent p-6">
-          <p className="text-sm text-white/70">
+        <div className="card">
+          <p className="text-sm text-muted">
             Ответь на 5–7 вопросов. Алгоритм даст диагноз и точечную рекомендацию.
           </p>
-          <div className="mt-4 flex items-center gap-3">
-            <span className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/70">
-              60 секунд
-            </span>
-            <span className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/70">
-              Без воды
-            </span>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="pill">60 секунд</span>
+            <span className="pill">Без воды</span>
           </div>
         </div>
 
         <AnimatePresence mode="wait">
           {view === 'home' && (
             <motion.div key="home" {...fadeUp} className="flex flex-col gap-4">
-              <div className={`${cardStyle} p-5`}>
-                <p className="text-sm text-white/70">Модули</p>
+              <div className="card">
+                <p className="text-sm text-muted">Модули</p>
                 <div className="mt-4 grid gap-3">
                   <ModuleCard
                     title="Диагностика поражения"
@@ -164,12 +154,11 @@ function App() {
                 </div>
               </div>
 
-              <div className={`${cardStyle} p-5`}>
-                <p className="text-sm text-white/70">Статус логики</p>
-                <p className="mt-2 text-xs text-white/50">
-                  Дерево: {treeSource === 'override' ? 'кастомное' : 'по умолчанию'} · Узлов: {
-                    Object.keys(tree.nodes).length
-                  }
+              <div className="card">
+                <p className="text-sm text-muted">Статус логики</p>
+                <p className="mt-2 text-xs text-faint">
+                  Дерево: {treeSource === 'override' ? 'кастомное' : 'по умолчанию'} · Узлов:{' '}
+                  {Object.keys(tree.nodes).length}
                 </p>
               </div>
             </motion.div>
@@ -224,676 +213,6 @@ function App() {
         </AnimatePresence>
       </div>
     </div>
-  )
-}
-
-function DiagnosticWizard({
-  tree,
-  canAccessPremium,
-  onExit,
-  onUnlock,
-  isAdmin,
-  telegramUserId,
-  telegramUsername,
-  webAppStatus,
-}: {
-  tree: DiagnosticTree
-  canAccessPremium: boolean
-  onExit: () => void
-  onUnlock: () => void
-  isAdmin: boolean
-  telegramUserId: string | null
-  telegramUsername: string | null
-  webAppStatus: WebAppStatus
-}) {
-  const [currentId, setCurrentId] = useState(tree.start)
-  const [history, setHistory] = useState<string[]>([])
-  const [answers, setAnswers] = useState<Record<string, string>>({})
-  const [unlocking, setUnlocking] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [saved, setSaved] = useState(false)
-  const [fallbackInvoiceLink, setFallbackInvoiceLink] = useState<string | null>(null)
-
-  useEffect(() => {
-    setCurrentId(tree.start)
-    setHistory([])
-    setAnswers({})
-    setError(null)
-    setSaved(false)
-    setFallbackInvoiceLink(null)
-  }, [tree])
-
-  const node = tree.nodes[currentId] as DiagnosticNode
-  const totalQuestions = useMemo(
-    () => Object.values(tree.nodes).filter((item) => item.type === 'question').length,
-    [tree.nodes],
-  )
-  const answeredCount = Object.keys(answers).length
-  const progress = Math.min(answeredCount / totalQuestions, 1)
-
-  const handleOption = (option: { label: string; next: string }) => {
-    if (node.type !== 'question') return
-    setAnswers((prev) => ({ ...prev, [currentId]: option.label }))
-    setHistory((prev) => [...prev, currentId])
-    setCurrentId(option.next)
-  }
-
-  const handleBack = () => {
-    if (history.length === 0) {
-      onExit()
-      return
-    }
-    const previousId = history[history.length - 1]
-    setHistory((prev) => prev.slice(0, -1))
-    setAnswers((prev) => {
-      const next = { ...prev }
-      delete next[previousId]
-      return next
-    })
-    setCurrentId(previousId)
-  }
-
-  const handleRestart = () => {
-    setCurrentId(tree.start)
-    setHistory([])
-    setAnswers({})
-    setError(null)
-    setSaved(false)
-    setFallbackInvoiceLink(null)
-  }
-
-  const handleShare = async (result: DiagnosticResult) => {
-    const text = `Armtemiy Lab: ${result.title}. ${result.diagnosis}`
-    if (navigator.share) {
-      await navigator.share({ text })
-      return
-    }
-    await navigator.clipboard.writeText(text)
-    setError('Результат скопирован в буфер обмена')
-  }
-
-  const openInvoiceLink = (invoiceLink: string, onPaid?: () => void) => {
-    const webApp = (window as any)?.Telegram?.WebApp
-
-    if (webApp?.openInvoice) {
-      webApp.openInvoice(invoiceLink, (status: string) => {
-        if (status === 'paid') {
-          onPaid?.()
-        } else if (status !== 'pending') {
-          setError('Оплата не завершена')
-        }
-        setUnlocking(false)
-      })
-      return
-    }
-
-    if (webApp?.openLink) {
-      webApp.openLink(invoiceLink)
-      setError('Ссылка открыта через Telegram. Если окно не появилось, открой WebApp снова.')
-      setUnlocking(false)
-      return
-    }
-
-    setFallbackInvoiceLink(invoiceLink)
-    setError('Открытие оплаты доступно только внутри Telegram WebApp')
-    setUnlocking(false)
-  }
-
-  const handleUnlock = async () => {
-    setUnlocking(true)
-    setError(null)
-    setFallbackInvoiceLink(null)
-    const response = await createStarsInvoice({
-      itemSlug: config.starsItemSlug,
-      userId: telegramUserId,
-      starsAmount: config.starsPrice,
-    })
-
-    if (!response.invoiceLink) {
-      setError(response.error || 'Не удалось создать счет')
-      setUnlocking(false)
-      return
-    }
-
-    openInvoiceLink(response.invoiceLink, onUnlock)
-  }
-
-  const handleTestInvoice = async () => {
-    setUnlocking(true)
-    setError(null)
-    setFallbackInvoiceLink(null)
-    const response = await createStarsInvoice({
-      itemSlug: config.starsItemSlug,
-      userId: telegramUserId,
-      starsAmount: config.starsPrice,
-    })
-
-    if (!response.invoiceLink) {
-      setError(response.error || 'Не удалось создать счет')
-      setUnlocking(false)
-      return
-    }
-
-    openInvoiceLink(response.invoiceLink)
-  }
-
-  useEffect(() => {
-    const saveResult = async () => {
-      if (!supabase) return
-      if (node.type !== 'result') return
-      if (saved) return
-
-      let userId: string | null = null
-      if (telegramUserId) {
-        const { data: userRow } = await supabase
-          .from('users')
-          .upsert(
-            {
-              telegram_user_id: telegramUserId,
-              username: telegramUsername,
-              is_admin: isAdmin,
-            },
-            { onConflict: 'telegram_user_id' },
-          )
-          .select('id')
-          .single()
-
-        userId = userRow?.id ?? null
-      }
-
-      await supabase.from('diagnostic_results').insert({
-        user_id: userId,
-        tree_id: null,
-        answers_json: answers,
-        result_json: { ...node, treeId: tree.id },
-      })
-
-      setSaved(true)
-    }
-
-    void saveResult()
-  }, [answers, isAdmin, node, saved, telegramUserId, telegramUsername, tree.id])
-
-  return (
-    <div className={`${cardStyle} p-5`}>
-      <div className="flex items-center justify-between">
-        <button
-          className="text-xs text-white/60"
-          onClick={handleBack}
-        >
-          ← назад
-        </button>
-        <p className="text-[11px] uppercase tracking-[0.3em] text-white/40">
-          Диагностика
-        </p>
-      </div>
-
-      <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-        <div
-          className="h-full rounded-full bg-amber-400 transition-all"
-          style={{ width: `${progress * 100}%` }}
-        />
-      </div>
-
-      <div className="mt-5">
-        {node.type === 'question' ? (
-          <QuestionNode node={node} onSelect={handleOption} />
-        ) : (
-          <ResultNode
-            node={node}
-            canAccessPremium={canAccessPremium}
-            onRestart={handleRestart}
-            onShare={handleShare}
-            onUnlock={handleUnlock}
-            onTestInvoice={handleTestInvoice}
-            unlocking={unlocking}
-            isAdmin={isAdmin}
-          />
-        )}
-      </div>
-
-      {error && (
-        <div className="mt-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
-          {error}
-        </div>
-      )}
-      {fallbackInvoiceLink && (
-        <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-white/70">
-          <p className="text-[11px] uppercase tracking-[0.2em] text-white/40">Invoice link</p>
-          <p className="mt-2 break-all text-[11px]">{fallbackInvoiceLink}</p>
-          <button
-            onClick={() => navigator.clipboard.writeText(fallbackInvoiceLink)}
-            className="mt-3 w-full rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-[11px] font-semibold"
-          >
-            Скопировать ссылку
-          </button>
-        </div>
-      )}
-      {!webAppStatus.available && (
-        <div className="mt-3 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200">
-          WebApp не обнаружен. Открой приложение через кнопку бота.
-          {config.botUsername && (
-            <a
-              className="mt-3 inline-flex w-full items-center justify-center rounded-xl border border-red-400/40 bg-red-500/10 px-3 py-2 text-[11px] font-semibold text-red-100"
-              href={`https://t.me/${config.botUsername}?startapp=lab`}
-            >
-              Открыть в Telegram
-            </a>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function ModuleCard({
-  title,
-  description,
-  actionLabel,
-  onAction,
-}: {
-  title: string
-  description: string
-  actionLabel: string
-  onAction: () => void
-}) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
-      <p className="text-sm font-medium">{title}</p>
-      <p className="mt-1 text-xs text-white/50">{description}</p>
-      <button
-        onClick={onAction}
-        className="mt-3 w-full rounded-xl bg-white px-4 py-2 text-xs font-semibold text-black"
-      >
-        {actionLabel}
-      </button>
-    </div>
-  )
-}
-
-function InputRow({
-  label,
-  value,
-  onChange,
-}: {
-  label: string
-  value: string
-  onChange: (value: string) => void
-}) {
-  return (
-    <label className="grid gap-2 text-xs text-white/60">
-      {label}
-      <input
-        type="number"
-        inputMode="decimal"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80"
-      />
-    </label>
-  )
-}
-
-function AnthroModule({ onExit }: { onExit: () => void }) {
-  const [forearm, setForearm] = useState('')
-  const [palm, setPalm] = useState('')
-  const [wrist, setWrist] = useState('')
-
-  const result = useMemo(() => {
-    const forearmValue = Number(forearm)
-    const palmValue = Number(palm)
-    const wristValue = Number(wrist)
-
-    if (!forearmValue || !palmValue || !wristValue) return null
-
-    let toproll = 0
-    let hook = 0
-    let press = 0
-
-    if (forearmValue >= 30) toproll += 2
-    if (forearmValue < 28) hook += 1
-    if (palmValue >= 10.5) toproll += 1
-    if (palmValue < 10) hook += 1
-    if (wristValue >= 18) hook += 2
-    if (wristValue >= 19) press += 1
-    if (wristValue < 16.5) toproll += 1
-
-    const maxScore = Math.max(toproll, hook, press)
-    if (maxScore === press) {
-      return {
-        style: 'Пресс',
-        note: 'Короткая дистанция и жесткий локоть дают шанс на пресс.',
-      }
-    }
-
-    if (maxScore === hook) {
-      return {
-        style: 'Крюк',
-        note: 'Жесткая кисть и плотный рычаг — сильная сторона.',
-      }
-    }
-
-    return {
-      style: 'Верх (Toproll)',
-      note: 'Длина рычага и пальцы дают преимущество в верхе.',
-    }
-  }, [forearm, palm, wrist])
-
-  return (
-    <div className={`${cardStyle} p-5`}>
-      <div className="flex items-center justify-between">
-        <button className="text-xs text-white/60" onClick={onExit}>
-          ← назад
-        </button>
-        <p className="text-[11px] uppercase tracking-[0.3em] text-white/40">Антропометрия</p>
-      </div>
-
-      <p className="mt-4 text-sm text-white/70">
-        Черновой расчет. Дальше будет заменен на экспертную модель.
-      </p>
-
-      <div className="mt-4 grid gap-3">
-        <InputRow label="Длина предплечья (см)" value={forearm} onChange={setForearm} />
-        <InputRow label="Длина ладони (см)" value={palm} onChange={setPalm} />
-        <InputRow label="Обхват запястья (см)" value={wrist} onChange={setWrist} />
-      </div>
-
-      <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
-        <p className="text-xs uppercase tracking-[0.3em] text-white/40">Результат</p>
-        {result ? (
-          <>
-            <p className="mt-2 text-lg font-semibold">{result.style}</p>
-            <p className="mt-2 text-xs text-white/60">{result.note}</p>
-          </>
-        ) : (
-          <p className="mt-2 text-xs text-white/50">Заполни все поля, чтобы получить подсказку.</p>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function CounterModule({ onExit }: { onExit: () => void }) {
-  const [opponent, setOpponent] = useState<'Верх' | 'Крюк' | 'Пресс' | null>(null)
-
-  const counterMap = {
-    Верх: {
-      counter: 'Пресс',
-      note: 'Быстро садись в пресс, перекрывай плечо и ломай линию.',
-    },
-    Крюк: {
-      counter: 'Верх',
-      note: 'Атакуй пальцы и высоту, чтобы сорвать крюк.',
-    },
-    Пресс: {
-      counter: 'Крюк',
-      note: 'Закрывай кисть соперника и выключай плечо.',
-    },
-  } as const
-
-  return (
-    <div className={`${cardStyle} p-5`}>
-      <div className="flex items-center justify-between">
-        <button className="text-xs text-white/60" onClick={onExit}>
-          ← назад
-        </button>
-        <p className="text-[11px] uppercase tracking-[0.3em] text-white/40">Контр-матрица</p>
-      </div>
-
-      <p className="mt-4 text-sm text-white/70">Выбери стиль соперника.</p>
-
-      <div className="mt-4 grid gap-2">
-        {(['Верх', 'Крюк', 'Пресс'] as const).map((style) => (
-          <button
-            key={style}
-            onClick={() => setOpponent(style)}
-            className={`rounded-2xl border px-4 py-3 text-sm transition ${
-              opponent === style
-                ? 'border-amber-400/60 bg-amber-400/10'
-                : 'border-white/10 bg-white/5'
-            }`}
-          >
-            {style}
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
-        <p className="text-xs uppercase tracking-[0.3em] text-white/40">Контр</p>
-        {opponent ? (
-          <>
-            <p className="mt-2 text-lg font-semibold">{counterMap[opponent].counter}</p>
-            <p className="mt-2 text-xs text-white/60">{counterMap[opponent].note}</p>
-          </>
-        ) : (
-          <p className="mt-2 text-xs text-white/50">Выбери стиль, чтобы получить ответ.</p>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function AdminModule({
-  tree,
-  treeSource,
-  onExit,
-  onApply,
-  onReset,
-}: {
-  tree: DiagnosticTree
-  treeSource: 'default' | 'override'
-  onExit: () => void
-  onApply: (tree: DiagnosticTree) => void
-  onReset: () => void
-}) {
-  const [jsonInput, setJsonInput] = useState('')
-  const [status, setStatus] = useState<string | null>(null)
-
-  const handleApply = () => {
-    setStatus(null)
-    try {
-      const parsed = JSON.parse(jsonInput) as DiagnosticTree
-      if (!parsed?.start || !parsed?.nodes) {
-        setStatus('Неверный JSON: нет start или nodes')
-        return
-      }
-      onApply(parsed)
-      setStatus('Загружено успешно')
-    } catch {
-      setStatus('Ошибка разбора JSON')
-    }
-  }
-
-  const handleFile = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    const text = await file.text()
-    setJsonInput(text)
-  }
-
-  const handleExport = () => {
-    const blob = new Blob([JSON.stringify(tree, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${tree.id || 'tree'}.json`
-    link.click()
-    URL.revokeObjectURL(url)
-  }
-
-  return (
-    <div className={`${cardStyle} p-5`}>
-      <div className="flex items-center justify-between">
-        <button className="text-xs text-white/60" onClick={onExit}>
-          ← назад
-        </button>
-        <p className="text-[11px] uppercase tracking-[0.3em] text-white/40">Админ: Логика</p>
-      </div>
-
-      <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-white/60">
-        Источник: {treeSource === 'override' ? 'кастомный JSON' : 'по умолчанию'} · Узлов:{' '}
-        {Object.keys(tree.nodes).length}
-      </div>
-
-      <div className="mt-4 grid gap-3">
-        <input
-          type="file"
-          accept="application/json"
-          onChange={handleFile}
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-white/70"
-        />
-        <textarea
-          rows={8}
-          value={jsonInput}
-          onChange={(event) => setJsonInput(event.target.value)}
-          placeholder="Вставь JSON дерева решений"
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-white/70"
-        />
-        <button
-          onClick={handleApply}
-          className="w-full rounded-xl bg-amber-400 px-4 py-3 text-xs font-semibold text-black"
-        >
-          Применить JSON
-        </button>
-        <button
-          onClick={handleExport}
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-white/80"
-        >
-          Экспорт текущего JSON
-        </button>
-        <button
-          onClick={onReset}
-          className="w-full rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-xs text-red-200"
-        >
-          Сбросить на дефолт
-        </button>
-      </div>
-
-      {status && (
-        <div className="mt-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
-          {status}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function QuestionNode({
-  node,
-  onSelect,
-}: {
-  node: DiagnosticQuestion
-  onSelect: (option: { label: string; next: string }) => void
-}) {
-  return (
-    <motion.div {...fadeUp}>
-      <p className="text-lg font-semibold">{node.text}</p>
-      {node.helper && <p className="mt-2 text-xs text-white/50">{node.helper}</p>}
-      <div className="mt-4 grid gap-3">
-        {node.options.map((option) => (
-          <button
-            key={option.label}
-            onClick={() => onSelect(option)}
-            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm text-white/80 transition hover:border-amber-400/40 hover:bg-amber-400/10"
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </motion.div>
-  )
-}
-
-function ResultNode({
-  node,
-  canAccessPremium,
-  onRestart,
-  onShare,
-  onUnlock,
-  onTestInvoice,
-  unlocking,
-  isAdmin,
-}: {
-  node: DiagnosticResult
-  canAccessPremium: boolean
-  onRestart: () => void
-  onShare: (node: DiagnosticResult) => void
-  onUnlock: () => void
-  onTestInvoice: () => void
-  unlocking: boolean
-  isAdmin: boolean
-}) {
-  const isLocked = node.premium && !canAccessPremium
-
-  return (
-    <motion.div {...fadeUp}>
-      <p className="text-xs uppercase tracking-[0.3em] text-white/40">Диагноз</p>
-      <h2 className="mt-3 text-2xl font-semibold">{node.title}</h2>
-      <p className="mt-3 text-sm text-white/70">{node.diagnosis}</p>
-
-      <div className="mt-5">
-        <p className="text-xs uppercase tracking-[0.3em] text-white/40">Рекомендации</p>
-        <div className="mt-3 grid gap-2">
-          {node.recommendations.map((item) => (
-            <div
-              key={item}
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80"
-            >
-              {item}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {node.premium && (
-        <div className="mt-5 rounded-2xl border border-amber-400/40 bg-amber-400/10 px-4 py-3">
-          <p className="text-xs uppercase tracking-[0.3em] text-amber-200/80">
-            Премиум-ветка
-          </p>
-          <p className="mt-2 text-xs text-amber-100/80">
-            {node.premiumTeaser || 'Доступ к расширенному разбору.'}
-          </p>
-          {isLocked ? (
-            <button
-              onClick={onUnlock}
-              disabled={unlocking}
-              className="mt-3 w-full rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-black"
-            >
-              {unlocking ? 'Открываю оплату...' : `Открыть за ${config.starsPrice} Star`}
-            </button>
-          ) : (
-            <p className="mt-3 text-xs text-amber-100/70">
-              Доступ открыт {isAdmin ? 'админом' : 'по оплате'}.
-            </p>
-          )}
-        </div>
-      )}
-
-      {isAdmin && (
-        <button
-          onClick={onTestInvoice}
-          disabled={unlocking}
-          className="mt-4 w-full rounded-xl border border-amber-300/40 bg-transparent px-4 py-3 text-xs font-semibold text-amber-100"
-        >
-          {unlocking ? 'Открываю счет...' : 'Тест оплаты (админ)'}
-        </button>
-      )}
-
-      <div className="mt-6 grid gap-3">
-        <button
-          onClick={onRestart}
-          className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80"
-        >
-          Пройти заново
-        </button>
-        <button
-          onClick={() => onShare(node)}
-          className="w-full rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-black"
-        >
-          Поделиться результатом
-        </button>
-      </div>
-    </motion.div>
   )
 }
 
