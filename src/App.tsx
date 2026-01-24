@@ -44,7 +44,8 @@ function App() {
     initTelegram()
     setTelegramUser(getTelegramUser())
     const webApp = (window as any)?.Telegram?.WebApp
-    const hasLaunchParams = new URLSearchParams(window.location.search).has('tgWebAppData')
+    const params = new URLSearchParams(window.location.search)
+    const hasLaunchParams = Array.from(params.keys()).some((key) => key.startsWith('tgWebApp'))
     setWebAppStatus({
       available: Boolean(webApp),
       openInvoice: Boolean(webApp?.openInvoice),
