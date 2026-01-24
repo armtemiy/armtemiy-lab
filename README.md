@@ -42,6 +42,11 @@ npm run dev
 - Миграция: `supabase/migrations/*.sql`
 - Таблица результатов: `diagnostic_results`
 
+## Документация
+
+- `docs/ADMIN.md` — админ-модуль и загрузка JSON
+- `docs/ANTHRO.md` — логика антропометрии
+
 ## Деплой на GitHub Pages
 
 В репозитории настроен GitHub Actions workflow.
