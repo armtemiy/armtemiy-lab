@@ -8,6 +8,7 @@ import type {
 } from './data/diagnosticTree'
 import { config } from './lib/config'
 import { createStarsInvoice } from './lib/payments'
+import { supabase } from './lib/supabase'
 import { getTelegramUser, initTelegram } from './lib/telegram'
 import type { TelegramUser } from './lib/telegram'
 
@@ -143,6 +144,7 @@ function DiagnosticWizard({
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [unlocking, setUnlocking] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
 
   const node = diagnosticTree.nodes[currentId] as DiagnosticNode
   const totalQuestions = useMemo(
@@ -180,6 +182,7 @@ function DiagnosticWizard({
     setHistory([])
     setAnswers({})
     setError(null)
+    setSaved(false)
   }
 
   const handleShare = async (result: DiagnosticResult) => {
@@ -224,6 +227,70 @@ function DiagnosticWizard({
     })
   }
 
+  const handleTestInvoice = async () => {
+    setUnlocking(true)
+    setError(null)
+    const response = await createStarsInvoice({
+      itemSlug: config.starsItemSlug,
+      userId: telegramUserId,
+      starsAmount: config.starsPrice,
+    })
+
+    if (!response.invoiceLink) {
+      setError(response.error || 'Не удалось создать счет')
+      setUnlocking(false)
+      return
+    }
+
+    const webApp = (window as any)?.Telegram?.WebApp
+    if (!webApp?.openInvoice) {
+      setError('Открытие оплаты доступно только в Telegram')
+      setUnlocking(false)
+      return
+    }
+
+    webApp.openInvoice(response.invoiceLink, () => {
+      setUnlocking(false)
+    })
+  }
+
+  useEffect(() => {
+    const saveResult = async () => {
+      if (!supabase) return
+      if (node.type !== 'result') return
+      if (saved) return
+
+      let userId: string | null = null
+      if (telegramUserId) {
+        const { data: userRow } = await supabase
+          .from('users')
+          .upsert(
+            {
+              telegram_user_id: telegramUserId,
+              username: telegramUser?.username ?? null,
+              is_admin: isAdmin,
+            },
+            { onConflict: 'telegram_user_id' },
+          )
+          .select('id')
+          .single()
+
+        userId = userRow?.id ?? null
+      }
+
+      await supabase.from('diagnostic_results').insert({
+        user_id: userId,
+        tree_id: null,
+        answers_json: answers,
+        result_json: node,
+      })
+
+      setSaved(true)
+    }
+
+    void saveResult()
+  }, [answers, isAdmin, node, saved, telegramUserId, telegramUser?.username])
+
   return (
     <div className={`${cardStyle} p-5`}>
       <div className="flex items-center justify-between">
@@ -255,6 +322,7 @@ function DiagnosticWizard({
             onRestart={handleRestart}
             onShare={handleShare}
             onUnlock={handleUnlock}
+            onTestInvoice={handleTestInvoice}
             unlocking={unlocking}
             isAdmin={isAdmin}
           />
@@ -302,6 +370,7 @@ function ResultNode({
   onRestart,
   onShare,
   onUnlock,
+  onTestInvoice,
   unlocking,
   isAdmin,
 }: {
@@ -310,6 +379,7 @@ function ResultNode({
   onRestart: () => void
   onShare: (node: DiagnosticResult) => void
   onUnlock: () => void
+  onTestInvoice: () => void
   unlocking: boolean
   isAdmin: boolean
 }) {
@@ -355,6 +425,15 @@ function ResultNode({
             <p className="mt-3 text-xs text-amber-100/70">
               Доступ открыт {isAdmin ? 'админом' : 'по оплате'}.
             </p>
+          )}
+          {isAdmin && (
+            <button
+              onClick={onTestInvoice}
+              disabled={unlocking}
+              className="mt-3 w-full rounded-xl border border-amber-300/40 bg-transparent px-4 py-3 text-xs font-semibold text-amber-100"
+            >
+              {unlocking ? 'Открываю счет...' : 'Тест оплаты (админ)'}
+            </button>
           )}
         </div>
       )}
