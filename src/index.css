@@ -3,42 +3,74 @@
 
 :root {
   font-family: 'Space Grotesk', system-ui, sans-serif;
-  color-scheme: light dark;
+  color-scheme: dark;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --bg: #f6f3ee;
-  --surface: rgba(255, 255, 255, 0.75);
-  --surface-strong: rgba(255, 255, 255, 0.9);
-  --surface-muted: rgba(15, 23, 42, 0.06);
-  --text-primary: #111827;
-  --text-muted: #4b5563;
-  --text-faint: #6b7280;
-  --stroke: rgba(15, 23, 42, 0.12);
-  --accent: #f97316;
-  --accent-strong: #fb923c;
-  --accent-contrast: #0f172a;
-  --danger: #dc2626;
-  --success: #16a34a;
-  --glow: rgba(249, 115, 22, 0.22);
-}
+  --color-primary-50: hsl(5 100% 97%);
+  --color-primary-100: hsl(5 95% 90%);
+  --color-primary-200: hsl(5 90% 80%);
+  --color-primary-300: hsl(5 88% 68%);
+  --color-primary-400: hsl(5 85% 58%);
+  --color-primary-500: hsl(5 85% 60%);
+  --color-primary-600: hsl(5 80% 52%);
+  --color-primary-700: hsl(5 78% 42%);
+  --color-primary-800: hsl(5 75% 32%);
+  --color-primary-900: hsl(5 70% 22%);
 
-:root[data-theme='dark'] {
-  --bg: #0a0d12;
-  --surface: rgba(17, 24, 39, 0.82);
-  --surface-strong: rgba(17, 24, 39, 0.95);
-  --surface-muted: rgba(255, 255, 255, 0.08);
-  --text-primary: #e5e7eb;
-  --text-muted: #9aa4b2;
-  --text-faint: #6b7280;
-  --stroke: rgba(148, 163, 184, 0.22);
-  --accent: #f59e0b;
-  --accent-strong: #fbbf24;
-  --accent-contrast: #111827;
-  --danger: #f87171;
-  --success: #22c55e;
-  --glow: rgba(245, 158, 11, 0.22);
+  --color-secondary-50: hsl(15 100% 96%);
+  --color-secondary-100: hsl(15 95% 88%);
+  --color-secondary-200: hsl(15 92% 78%);
+  --color-secondary-300: hsl(15 90% 65%);
+  --color-secondary-400: hsl(15 88% 55%);
+  --color-secondary-500: hsl(15 90% 50%);
+  --color-secondary-600: hsl(15 85% 45%);
+  --color-secondary-700: hsl(15 80% 35%);
+  --color-secondary-800: hsl(15 75% 25%);
+  --color-secondary-900: hsl(15 70% 18%);
+
+  --color-neutral-50: hsl(15 10% 96%);
+  --color-neutral-100: hsl(15 10% 90%);
+  --color-neutral-200: hsl(15 8% 78%);
+  --color-neutral-300: hsl(15 6% 60%);
+  --color-neutral-400: hsl(15 5% 45%);
+  --color-neutral-500: hsl(15 4% 30%);
+  --color-neutral-600: hsl(15 4% 20%);
+  --color-neutral-700: hsl(15 5% 14%);
+  --color-neutral-800: hsl(15 6% 10%);
+  --color-neutral-900: hsl(15 8% 6%);
+
+  --color-background: var(--color-neutral-900);
+  --color-surface: var(--color-neutral-800);
+  --color-surface-elevated: var(--color-neutral-700);
+  --color-text-primary: var(--color-neutral-50);
+  --color-text-secondary: var(--color-neutral-300);
+  --color-text-muted: var(--color-neutral-400);
+  --color-accent: var(--color-primary-500);
+  --color-accent-hover: var(--color-primary-400);
+  --color-accent-active: var(--color-primary-600);
+  --color-border: var(--color-neutral-700);
+  --color-border-subtle: hsl(15 5% 14% / 0.5);
+  --color-success: hsl(142 76% 36%);
+  --color-warning: hsl(38 92% 50%);
+  --color-error: var(--color-primary-500);
+  --color-info: hsl(199 89% 48%);
+
+  --bg: var(--color-background);
+  --surface: color-mix(in srgb, var(--color-surface) 88%, black 12%);
+  --surface-strong: color-mix(in srgb, var(--color-surface-elevated) 92%, black 8%);
+  --surface-muted: color-mix(in srgb, var(--color-surface) 80%, transparent 20%);
+  --text-primary: var(--color-text-primary);
+  --text-muted: var(--color-text-secondary);
+  --text-faint: var(--color-text-muted);
+  --stroke: var(--color-border);
+  --accent: var(--color-accent);
+  --accent-strong: var(--color-accent-active);
+  --accent-contrast: var(--color-text-primary);
+  --danger: var(--color-error);
+  --success: var(--color-success);
+  --glow: hsl(5 85% 60% / 0.35);
 }
 
 * {
@@ -49,9 +81,9 @@ body {
   margin: 0;
   min-height: 100vh;
   color: var(--text-primary);
-  background: radial-gradient(1200px 600px at 15% -10%, var(--glow), transparent 60%),
-    radial-gradient(1000px 500px at 90% -20%, rgba(56, 189, 248, 0.1), transparent 60%),
-    linear-gradient(160deg, var(--bg) 0%, rgba(15, 23, 42, 0.08) 45%, var(--bg) 100%);
+  background: radial-gradient(900px 400px at 12% -20%, hsl(5 85% 60% / 0.35), transparent 60%),
+    radial-gradient(800px 380px at 90% -10%, hsl(15 90% 50% / 0.2), transparent 60%),
+    linear-gradient(160deg, var(--bg) 0%, color-mix(in srgb, var(--color-neutral-900) 92%, var(--color-primary-900) 8%) 50%, var(--bg) 100%);
 }
 
 #root {
@@ -60,55 +92,55 @@ body {
 
 @layer components {
   .card {
-    @apply rounded-3xl border px-5 py-5 shadow-[0_20px_60px_rgba(0,0,0,0.18)];
-    border-color: var(--stroke);
-    background: var(--surface);
-    backdrop-filter: blur(18px);
+    @apply rounded-3xl border px-5 py-5 shadow-[0_20px_60px_rgba(0,0,0,0.45)];
+    border-color: var(--color-border-subtle);
+    background: var(--color-surface);
+    backdrop-filter: blur(12px);
   }
 
   .card-soft {
     @apply rounded-2xl border px-4 py-4;
-    border-color: var(--stroke);
-    background: var(--surface-muted);
+    border-color: var(--color-border-subtle);
+    background: var(--color-surface-elevated);
   }
 
   .pill {
     @apply inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.3em];
-    border-color: var(--stroke);
+    border-color: var(--color-border-subtle);
     color: var(--text-faint);
   }
 
   .btn-primary {
     @apply w-full rounded-2xl px-4 py-3 text-sm font-semibold shadow-[0_12px_24px_rgba(0,0,0,0.18)];
-    background: var(--accent);
-    color: var(--accent-contrast);
+    background: var(--color-accent);
+    color: var(--color-text-primary);
   }
 
   .btn-outline {
     @apply w-full rounded-2xl border px-4 py-3 text-sm font-semibold;
-    border-color: var(--stroke);
+    border-color: var(--color-border-subtle);
     background: transparent;
     color: var(--text-primary);
   }
 
   .btn-ghost {
     @apply w-full rounded-2xl border px-4 py-3 text-sm;
-    border-color: var(--stroke);
-    background: var(--surface-muted);
+    border-color: var(--color-border-subtle);
+    background: var(--color-surface-elevated);
     color: var(--text-muted);
   }
 
   .btn-accent {
     @apply w-full rounded-xl px-4 py-3 text-xs font-semibold;
-    background: var(--accent-strong);
-    color: var(--accent-contrast);
+    background: var(--color-accent-active);
+    color: var(--color-text-primary);
   }
 
   .btn-danger {
     @apply w-full rounded-xl border px-4 py-3 text-xs font-semibold;
-    border-color: rgba(239, 68, 68, 0.4);
-    background: rgba(239, 68, 68, 0.1);
-    color: var(--danger);
+    border-color: hsl(5 85% 60% / 0.4);
+    background: hsl(5 85% 60% / 0.12);
+    color: var(--color-error);
   }
 
   .text-muted {
