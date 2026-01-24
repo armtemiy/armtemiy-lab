@@ -13,6 +13,11 @@ import { getTelegramUser, initTelegram } from './lib/telegram'
 import type { TelegramUser } from './lib/telegram'
 
 type View = 'home' | 'wizard'
+type WebAppStatus = {
+  available: boolean
+  openInvoice: boolean
+  platform: string
+}
 
 const fadeUp = {
   initial: { opacity: 0, y: 18 },
@@ -27,10 +32,21 @@ function App() {
   const [view, setView] = useState<View>('home')
   const [telegramUser, setTelegramUser] = useState<TelegramUser | null>(null)
   const [premiumUnlocked, setPremiumUnlocked] = useState(false)
+  const [webAppStatus, setWebAppStatus] = useState<WebAppStatus>({
+    available: false,
+    openInvoice: false,
+    platform: 'unknown',
+  })
 
   useEffect(() => {
     initTelegram()
     setTelegramUser(getTelegramUser())
+    const webApp = (window as any)?.Telegram?.WebApp
+    setWebAppStatus({
+      available: Boolean(webApp),
+      openInvoice: Boolean(webApp?.openInvoice),
+      platform: webApp?.platform || 'unknown',
+    })
   }, [])
 
   const isAdmin = telegramUser?.id ? config.adminIds.includes(telegramUser.id) : false
@@ -60,6 +76,12 @@ function App() {
             {telegramUser?.username && (
               <span className="mt-2 font-mono text-[11px] text-white/40">
                 @{telegramUser.username}
+              </span>
+            )}
+            {isAdmin && (
+              <span className="mt-2 font-mono text-[10px] text-white/40">
+                WebApp {webAppStatus.available ? 'on' : 'off'} · invoice{' '}
+                {webAppStatus.openInvoice ? 'on' : 'off'} · {webAppStatus.platform}
               </span>
             )}
           </div>
@@ -123,6 +145,7 @@ function App() {
                 isAdmin={isAdmin}
                 telegramUserId={telegramUser?.id ?? null}
                 telegramUsername={telegramUser?.username ?? null}
+                webAppStatus={webAppStatus}
               />
             </motion.div>
           )}
@@ -139,6 +162,7 @@ function DiagnosticWizard({
   isAdmin,
   telegramUserId,
   telegramUsername,
+  webAppStatus,
 }: {
   canAccessPremium: boolean
   onExit: () => void
@@ -146,6 +170,7 @@ function DiagnosticWizard({
   isAdmin: boolean
   telegramUserId: string | null
   telegramUsername: string | null
+  webAppStatus: WebAppStatus
 }) {
   const [currentId, setCurrentId] = useState(diagnosticTree.start)
   const [history, setHistory] = useState<string[]>([])
@@ -153,6 +178,7 @@ function DiagnosticWizard({
   const [unlocking, setUnlocking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  const [fallbackInvoiceLink, setFallbackInvoiceLink] = useState<string | null>(null)
 
   const node = diagnosticTree.nodes[currentId] as DiagnosticNode
   const totalQuestions = useMemo(
@@ -191,6 +217,7 @@ function DiagnosticWizard({
     setAnswers({})
     setError(null)
     setSaved(false)
+    setFallbackInvoiceLink(null)
   }
 
   const handleShare = async (result: DiagnosticResult) => {
@@ -203,9 +230,37 @@ function DiagnosticWizard({
     setError('Результат скопирован в буфер обмена')
   }
 
+  const openInvoiceLink = (invoiceLink: string, onPaid?: () => void) => {
+    const webApp = (window as any)?.Telegram?.WebApp
+
+    if (webApp?.openInvoice) {
+      webApp.openInvoice(invoiceLink, (status: string) => {
+        if (status === 'paid') {
+          onPaid?.()
+        } else if (status !== 'pending') {
+          setError('Оплата не завершена')
+        }
+        setUnlocking(false)
+      })
+      return
+    }
+
+    if (webApp?.openLink) {
+      webApp.openLink(invoiceLink)
+      setError('Открыл ссылку через Telegram. Если окно не появилось, открой WebApp снова.')
+      setUnlocking(false)
+      return
+    }
+
+    setFallbackInvoiceLink(invoiceLink)
+    setError('Открытие оплаты доступно только внутри Telegram WebApp')
+    setUnlocking(false)
+  }
+
   const handleUnlock = async () => {
     setUnlocking(true)
     setError(null)
+    setFallbackInvoiceLink(null)
     const response = await createStarsInvoice({
       itemSlug: config.starsItemSlug,
       userId: telegramUserId,
@@ -218,26 +273,13 @@ function DiagnosticWizard({
       return
     }
 
-    const webApp = (window as any)?.Telegram?.WebApp
-    if (!webApp?.openInvoice) {
-      setError('Открытие оплаты доступно только в Telegram')
-      setUnlocking(false)
-      return
-    }
-
-    webApp.openInvoice(response.invoiceLink, (status: string) => {
-      if (status === 'paid') {
-        onUnlock()
-      } else if (status !== 'pending') {
-        setError('Оплата не завершена')
-      }
-      setUnlocking(false)
-    })
+    openInvoiceLink(response.invoiceLink, onUnlock)
   }
 
   const handleTestInvoice = async () => {
     setUnlocking(true)
     setError(null)
+    setFallbackInvoiceLink(null)
     const response = await createStarsInvoice({
       itemSlug: config.starsItemSlug,
       userId: telegramUserId,
@@ -250,16 +292,7 @@ function DiagnosticWizard({
       return
     }
 
-    const webApp = (window as any)?.Telegram?.WebApp
-    if (!webApp?.openInvoice) {
-      setError('Открытие оплаты доступно только в Telegram')
-      setUnlocking(false)
-      return
-    }
-
-    webApp.openInvoice(response.invoiceLink, () => {
-      setUnlocking(false)
-    })
+    openInvoiceLink(response.invoiceLink)
   }
 
   useEffect(() => {
@@ -340,6 +373,23 @@ function DiagnosticWizard({
       {error && (
         <div className="mt-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
           {error}
+        </div>
+      )}
+      {fallbackInvoiceLink && (
+        <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-white/70">
+          <p className="text-[11px] uppercase tracking-[0.2em] text-white/40">Invoice link</p>
+          <p className="mt-2 break-all text-[11px]">{fallbackInvoiceLink}</p>
+          <button
+            onClick={() => navigator.clipboard.writeText(fallbackInvoiceLink)}
+            className="mt-3 w-full rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-[11px] font-semibold"
+          >
+            Скопировать ссылку
+          </button>
+        </div>
+      )}
+      {isAdmin && !webAppStatus.available && (
+        <div className="mt-3 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200">
+          WebApp не обнаружен. Открой приложение через кнопку бота, не через браузер.
         </div>
       )}
     </div>
