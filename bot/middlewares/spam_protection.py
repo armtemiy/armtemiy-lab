@@ -1,9 +1,11 @@
 from aiogram import BaseMiddleware
-from aiogram.types import Update, Message
+from aiogram.types import Update
+from collections import deque
 from datetime import datetime, timedelta
-from typing import Any, Awaitable, Callable, Dict
+from time import monotonic
+from typing import Any, Awaitable, Callable, Deque, Dict
 import os
-from sqlalchemy import select, func, delete
+from sqlalchemy import select, func
 from sqlalchemy.exc import DBAPIError
 
 from bot.db.database import AsyncSessionLocal
@@ -18,7 +20,10 @@ class SpamProtectionMiddleware(BaseMiddleware):
     MAX_REQUESTS = 30
     TIME_PERIOD = 60
     SKIP_ADMINS = True
-    
+    RATE_LIMIT_BACKEND = os.getenv("RATE_LIMIT_BACKEND", "memory").lower()
+
+    _memory_requests: Dict[int, Deque[float]] = {}
+
     ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
 
     async def __call__(
@@ -35,15 +40,19 @@ class SpamProtectionMiddleware(BaseMiddleware):
         if self.SKIP_ADMINS and user_id == self.ADMIN_ID:
             return await handler(event, data)
 
-        # При ошибке БД - пропускаем проверку и продолжаем
-        try:
-            if not await self._check_limit(user_id):
+        if self.RATE_LIMIT_BACKEND == "db":
+            try:
+                if not await self._check_limit_db(user_id):
+                    await self._send_rate_limit_exceeded(event)
+                    return
+                await self._add_request_db(user_id)
+            except (DBAPIError, OSError, Exception) as e:
+                print(f"SpamProtection DB error (skipping check): {e}")
+        else:
+            if not self._check_limit_memory(user_id):
                 await self._send_rate_limit_exceeded(event)
                 return
-            await self._add_request(user_id)
-        except (DBAPIError, OSError, Exception) as e:
-            # Логируем но не блокируем пользователя
-            print(f"SpamProtection DB error (skipping check): {e}")
+            self._add_request_memory(user_id)
 
         return await handler(event, data)
 
@@ -62,7 +71,28 @@ class SpamProtectionMiddleware(BaseMiddleware):
         elif event.callback_query:
             await event.callback_query.answer("Слишком много запросов.")
 
-    async def _check_limit(self, telegram_id: int) -> bool:
+    def _check_limit_memory(self, telegram_id: int) -> bool:
+        now = monotonic()
+        window_start = now - self.TIME_PERIOD
+
+        bucket = self._memory_requests.get(telegram_id)
+        if bucket is None:
+            bucket = deque()
+            self._memory_requests[telegram_id] = bucket
+
+        while bucket and bucket[0] < window_start:
+            bucket.popleft()
+
+        return len(bucket) < self.MAX_REQUESTS
+
+    def _add_request_memory(self, telegram_id: int) -> None:
+        bucket = self._memory_requests.get(telegram_id)
+        if bucket is None:
+            bucket = deque()
+            self._memory_requests[telegram_id] = bucket
+        bucket.append(monotonic())
+
+    async def _check_limit_db(self, telegram_id: int) -> bool:
         async with AsyncSessionLocal() as session:
             cutoff_time = datetime.utcnow() - timedelta(seconds=self.TIME_PERIOD)
             
@@ -75,7 +105,7 @@ class SpamProtectionMiddleware(BaseMiddleware):
             
             return count < self.MAX_REQUESTS
 
-    async def _add_request(self, telegram_id: int) -> None:
+    async def _add_request_db(self, telegram_id: int) -> None:
         async with AsyncSessionLocal() as session:
             entry = RateLimitEntry(telegram_id=telegram_id)
             session.add(entry)

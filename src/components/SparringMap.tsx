@@ -12,21 +12,48 @@ interface SparringMapProps {
   height?: string
 }
 
-// Кастомная иконка маркера в стиле палитры
-const createMarkerIcon = (style: 'outside' | 'inside' | 'both') => {
-  const colors: Record<string, string> = {
-    outside: '#E63946', // primary-500 (красный)
-    inside: '#FF4500',  // secondary-500 (оранжевый)
-    both: '#4A90E2'     // info (синий)
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+
+const safeText = (value?: string) => (value ? escapeHtml(value) : '')
+
+const safeUrl = (value?: string) => {
+  if (!value) return null
+  try {
+    const url = new URL(value)
+    if (url.protocol === 'http:' || url.protocol === 'https:') {
+      return url.toString()
+    }
+  } catch {
+    return null
   }
-  
-  return L.divIcon({
+  return null
+}
+
+// Кастомная иконка маркера в стиле палитры
+const markerColors: Record<string, string> = {
+  outside: '#E63946', // primary-500 (красный)
+  inside: '#FF4500', // secondary-500 (оранжевый)
+  both: '#4A90E2' // info (синий)
+}
+
+const markerIcons: Record<string, L.DivIcon> = {}
+
+const createMarkerIcon = (style: 'outside' | 'inside' | 'both') => {
+  if (markerIcons[style]) return markerIcons[style]
+
+  const icon = L.divIcon({
     className: 'custom-marker',
     html: `
       <div style="
         width: 32px;
         height: 32px;
-        background: ${colors[style]};
+        background: ${markerColors[style]};
         border: 3px solid #F1F2F3;
         border-radius: 50%;
         box-shadow: 0 4px 12px rgba(0,0,0,0.4);
@@ -43,6 +70,9 @@ const createMarkerIcon = (style: 'outside' | 'inside' | 'both') => {
     iconAnchor: [16, 16],
     popupAnchor: [0, -20]
   })
+
+  markerIcons[style] = icon
+  return icon
 }
 
 export function SparringMap({
@@ -64,13 +94,15 @@ export function SparringMap({
       center,
       zoom,
       zoomControl: true,
-      attributionControl: true
+      attributionControl: true,
+      preferCanvas: true
     })
 
     // Тёмный стиль карты (CartoDB Dark Matter)
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
-      maxZoom: 19
+      maxZoom: 19,
+      updateWhenIdle: true
     }).addTo(map)
 
     mapInstanceRef.current = map
@@ -92,6 +124,13 @@ export function SparringMap({
 
     // Добавляем новые маркеры
     profiles.forEach(profile => {
+      const firstName = safeText(profile.first_name)
+      const lastName = safeText(profile.last_name)
+      const username = safeText(profile.telegram_username)
+      const avatarUrl = safeUrl(profile.photo_url)
+      const initials = `${profile.first_name?.[0] ?? '?'}${profile.last_name?.[0] ?? ''}`
+      const profileId = encodeURIComponent(profile.id)
+
       const marker = L.marker([profile.latitude, profile.longitude], {
         icon: createMarkerIcon(profile.style)
       })
@@ -109,16 +148,16 @@ export function SparringMap({
             gap: 10px;
             margin-bottom: 8px;
           ">
-            ${profile.photo_url 
-              ? `<img src="${profile.photo_url}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" />`
-              : `<div style="width: 40px; height: 40px; border-radius: 50%; background: #3C4251; display: flex; align-items: center; justify-content: center; color: #F1F2F3; font-weight: bold;">${profile.first_name[0]}</div>`
+            ${avatarUrl 
+              ? `<img src="${avatarUrl}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" />`
+              : `<div style="width: 40px; height: 40px; border-radius: 50%; background: #3C4251; display: flex; align-items: center; justify-content: center; color: #F1F2F3; font-weight: bold;">${escapeHtml(initials)}</div>`
             }
             <div>
               <div style="font-weight: 600; color: #F1F2F3;">
-                ${profile.first_name}${profile.last_name ? ' ' + profile.last_name : ''}
+                ${firstName}${lastName ? ' ' + lastName : ''}
               </div>
               <div style="font-size: 12px; color: #7A8E99;">
-                @${profile.telegram_username}
+                @${username}
               </div>
             </div>
           </div>
@@ -142,7 +181,7 @@ export function SparringMap({
           </div>
           
           <button 
-            onclick="window.openSparringProfile('${profile.id}')"
+            onclick="window.openSparringProfile('${profileId}')"
             style="
               display: block;
               width: 100%;
@@ -176,7 +215,8 @@ export function SparringMap({
 
     // Глобальная функция для кнопки в попапе
     ;(window as any).openSparringProfile = (id: string) => {
-      const profile = profiles.find(p => p.id === id)
+      const decodedId = decodeURIComponent(id)
+      const profile = profiles.find(p => p.id === decodedId)
       if (profile) {
         onMarkerClick(profile)
       }

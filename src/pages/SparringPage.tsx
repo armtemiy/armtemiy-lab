@@ -1,11 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { SparringMap } from '../components/SparringMap'
 import { getAllSparringProfiles, getMyProfile } from '../lib/sparring'
 import { getTelegramUser } from '../lib/telegram'
 import type { SparringProfile } from '../types'
 import { fadeUp } from '../ui'
+
+const SparringMap = lazy(() => import('../components/SparringMap').then((m) => ({ default: m.SparringMap })))
+
+const cacheKey = 'sparring_profiles_cache_v1'
+const cacheTtlMs = 60_000
 
 export function SparringPage() {
   const navigate = useNavigate()
@@ -15,14 +19,20 @@ export function SparringPage() {
   const telegramUser = getTelegramUser()
 
   useEffect(() => {
-    loadData()
+    const cached = readCache()
+    if (cached.length > 0) {
+      setProfiles(cached)
+      setLoading(false)
+    }
+    loadData(cached.length === 0)
   }, [])
 
-  async function loadData() {
-    setLoading(true)
+  async function loadData(showLoading: boolean) {
+    if (showLoading) setLoading(true)
     try {
       const allProfiles = await getAllSparringProfiles()
       setProfiles(allProfiles)
+      writeCache(allProfiles)
 
       if (telegramUser?.id) {
         const myProfile = await getMyProfile(String(telegramUser.id))
@@ -31,7 +41,28 @@ export function SparringPage() {
     } catch (error) {
       console.error('Error loading sparring data:', error)
     } finally {
-      setLoading(false)
+      if (showLoading) setLoading(false)
+    }
+  }
+
+  function readCache(): SparringProfile[] {
+    try {
+      const raw = localStorage.getItem(cacheKey)
+      if (!raw) return []
+      const cached = JSON.parse(raw) as { timestamp: number; data: SparringProfile[] }
+      if (!cached?.timestamp || !Array.isArray(cached.data)) return []
+      if (Date.now() - cached.timestamp > cacheTtlMs) return []
+      return cached.data
+    } catch {
+      return []
+    }
+  }
+
+  function writeCache(data: SparringProfile[]) {
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data }))
+    } catch {
+      return
     }
   }
 
@@ -63,19 +94,26 @@ export function SparringPage() {
 
       {/* Map Container */}
       <div className="relative flex-1">
-        {loading ? (
-          <div className="flex h-full items-center justify-center">
+        <Suspense
+          fallback={
+            <div className="flex h-full items-center justify-center">
+              <div className="text-center">
+                <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-[color:var(--accent)] border-t-transparent" />
+                <p className="text-sm text-muted">Загрузка карты...</p>
+              </div>
+            </div>
+          }
+        >
+          <SparringMap profiles={profiles} onMarkerClick={handleMarkerClick} height="100%" />
+        </Suspense>
+
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[color:var(--background)]/70 backdrop-blur-sm">
             <div className="text-center">
               <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-[color:var(--accent)] border-t-transparent" />
-              <p className="text-sm text-muted">Загрузка карты...</p>
+              <p className="text-sm text-muted">Обновляем список...</p>
             </div>
           </div>
-        ) : (
-          <SparringMap
-            profiles={profiles}
-            onMarkerClick={handleMarkerClick}
-            height="100%"
-          />
         )}
 
         {/* Legend */}

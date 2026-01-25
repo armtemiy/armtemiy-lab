@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { diagnosticTree } from './data/diagnosticTree'
@@ -7,15 +7,22 @@ import { config } from './lib/config'
 import { getTelegramUser, initTelegram } from './lib/telegram'
 import type { TelegramUser } from './lib/telegram'
 import { ModuleCard } from './components/ModuleCard'
-import { AdminModule } from './modules/AdminModule'
-import { AnthroModule } from './modules/AnthroModule'
-import { CounterModule } from './modules/CounterModule'
-import { DiagnosticWizard } from './modules/DiagnosticWizard'
-import { SparringPage } from './pages/SparringPage'
-import { SparringMyProfilePage } from './pages/SparringMyProfilePage'
-import { SparringProfilePage } from './pages/SparringProfilePage'
 import type { TreeSource, WebAppStatus } from './types'
 import { fadeUp } from './ui'
+
+const AdminModule = lazy(() => import('./modules/AdminModule').then((m) => ({ default: m.AdminModule })))
+const AnthroModule = lazy(() => import('./modules/AnthroModule').then((m) => ({ default: m.AnthroModule })))
+const CounterModule = lazy(() => import('./modules/CounterModule').then((m) => ({ default: m.CounterModule })))
+const DiagnosticWizard = lazy(() => import('./modules/DiagnosticWizard').then((m) => ({ default: m.DiagnosticWizard })))
+const SparringPage = lazy(() => import('./pages/SparringPage').then((m) => ({ default: m.SparringPage })))
+const SparringMyProfilePage = lazy(() => import('./pages/SparringMyProfilePage').then((m) => ({ default: m.SparringMyProfilePage })))
+const SparringProfilePage = lazy(() => import('./pages/SparringProfilePage').then((m) => ({ default: m.SparringProfilePage })))
+
+const LoadingCard = () => (
+  <div className="card">
+    <p className="text-sm text-muted">Загрузка...</p>
+  </div>
+)
 
 type View = 'home' | 'wizard' | 'anthro' | 'counter' | 'admin'
 
@@ -180,48 +187,56 @@ function HomePage() {
 
           {view === 'wizard' && (
             <motion.div key="wizard" {...fadeUp}>
-              <DiagnosticWizard
-                tree={tree}
-                canAccessPremium={canAccessPremium}
-                onExit={() => setView('home')}
-                onUnlock={() => setPremiumUnlocked(true)}
-                isAdmin={isAdmin}
-                telegramUserId={telegramUser?.id ? String(telegramUser.id) : null}
-                telegramUsername={telegramUser?.username ?? null}
-                webAppStatus={webAppStatus}
-              />
+              <Suspense fallback={<LoadingCard />}>
+                <DiagnosticWizard
+                  tree={tree}
+                  canAccessPremium={canAccessPremium}
+                  onExit={() => setView('home')}
+                  onUnlock={() => setPremiumUnlocked(true)}
+                  isAdmin={isAdmin}
+                  telegramUserId={telegramUser?.id ? String(telegramUser.id) : null}
+                  telegramUsername={telegramUser?.username ?? null}
+                  webAppStatus={webAppStatus}
+                />
+              </Suspense>
             </motion.div>
           )}
 
           {view === 'anthro' && (
             <motion.div key="anthro" {...fadeUp}>
-              <AnthroModule onExit={() => setView('home')} />
+              <Suspense fallback={<LoadingCard />}>
+                <AnthroModule onExit={() => setView('home')} />
+              </Suspense>
             </motion.div>
           )}
 
           {view === 'counter' && (
             <motion.div key="counter" {...fadeUp}>
-              <CounterModule onExit={() => setView('home')} />
+              <Suspense fallback={<LoadingCard />}>
+                <CounterModule onExit={() => setView('home')} />
+              </Suspense>
             </motion.div>
           )}
 
           {view === 'admin' && isAdmin && (
             <motion.div key="admin" {...fadeUp}>
-              <AdminModule
-                tree={tree}
-                treeSource={treeSource}
-                onExit={() => setView('home')}
-                onApply={(nextTree) => {
-                  setTree(nextTree)
-                  setTreeSource('override')
-                  localStorage.setItem(treeStorageKey, JSON.stringify(nextTree))
-                }}
-                onReset={() => {
-                  setTree(diagnosticTree)
-                  setTreeSource('default')
-                  localStorage.removeItem(treeStorageKey)
-                }}
-              />
+              <Suspense fallback={<LoadingCard />}>
+                <AdminModule
+                  tree={tree}
+                  treeSource={treeSource}
+                  onExit={() => setView('home')}
+                  onApply={(nextTree) => {
+                    setTree(nextTree)
+                    setTreeSource('override')
+                    localStorage.setItem(treeStorageKey, JSON.stringify(nextTree))
+                  }}
+                  onReset={() => {
+                    setTree(diagnosticTree)
+                    setTreeSource('default')
+                    localStorage.removeItem(treeStorageKey)
+                  }}
+                />
+              </Suspense>
             </motion.div>
           )}
         </AnimatePresence>
@@ -255,14 +270,15 @@ function App() {
 
   return (
     <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/sparring" element={<SparringPage />} />
-        <Route path="/sparring/my-profile" element={<SparringMyProfilePage />} />
-        <Route path="/sparring/profile/:id" element={<SparringProfilePage />} />
-        {/* Ловушка для любых других путей - возвращаем на главную */}
-        <Route path="*" element={<HomePage />} />
-      </Routes>
+      <Suspense fallback={<div className="p-4"><LoadingCard /></div>}>
+        <Routes location={location} key={location.pathname}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/sparring" element={<SparringPage />} />
+          <Route path="/sparring/my-profile" element={<SparringMyProfilePage />} />
+          <Route path="/sparring/profile/:id" element={<SparringProfilePage />} />
+          <Route path="*" element={<HomePage />} />
+        </Routes>
+      </Suspense>
     </AnimatePresence>
   )
 }
