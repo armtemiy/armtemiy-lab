@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { getSparringProfileById } from '../lib/sparring'
 import type { SparringProfile } from '../types'
-import { styleLabels, handLabels, formatWeight } from '../types'
+import { styleLabels, handLabels } from '../types'
 import { fadeUp } from '../ui'
 
 export function SparringProfilePage() {
@@ -176,22 +176,21 @@ export function SparringProfilePage() {
               </div>
             </div>
 
-            {/* Weight in both units */}
-            {profile.weight_kg && (
-              <p className="mt-3 text-center text-xs font-medium text-[color:var(--text-secondary)] opacity-50">
-                {formatWeight(profile.weight_kg)}
-              </p>
-            )}
-
             {/* Style Description */}
             <div className="mt-8 text-left">
               <h3 className="text-xs font-bold uppercase tracking-wider text-[color:var(--text-secondary)] opacity-60 mb-3">
                 Стиль борьбы
               </h3>
-              <div 
-                className="rounded-2xl border-l-4 bg-[color:var(--background)] p-4 shadow-sm"
-                style={{ borderLeftColor: styleColor }}
-              >
+              <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--background)] p-4 shadow-sm">
+                <div className="mb-2 flex items-center gap-2">
+                  <span 
+                    className="h-2 w-2 rounded-full" 
+                    style={{ background: styleColor }}
+                  />
+                  <span className="text-xs font-bold uppercase tracking-wide text-[color:var(--text-secondary)]">
+                    {styleInfo.name}
+                  </span>
+                </div>
                 <p className="text-sm leading-relaxed text-[color:var(--text-primary)] font-medium">
                   {styleInfo.description}
                 </p>
@@ -204,9 +203,11 @@ export function SparringProfilePage() {
                 <h3 className="text-xs font-bold uppercase tracking-wider text-[color:var(--text-secondary)] opacity-60 mb-3">
                   О себе
                 </h3>
-                <p className="whitespace-pre-wrap text-sm leading-relaxed text-[color:var(--text-primary)] bg-[color:var(--background)] p-4 rounded-2xl shadow-sm">
-                  {profile.bio}
-                </p>
+                <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--background)] p-4 shadow-sm">
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-[color:var(--text-primary)]">
+                    {profile.bio}
+                  </p>
+                </div>
               </div>
             )}
 

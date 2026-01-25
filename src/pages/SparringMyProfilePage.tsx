@@ -229,16 +229,30 @@ export function SparringMyProfilePage() {
     setUploading(true)
     setError(null)
 
+    // Helper for timeout
+    const withTimeout = <T,>(promise: Promise<T>, ms: number) => {
+        return Promise.race([
+            promise,
+            new Promise<T>((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms))
+        ])
+    }
+
     try {
-      const publicUrl = await uploadAvatar(file, String(telegramUser.id))
+      // 15 seconds timeout for upload
+      const publicUrl = await withTimeout(uploadAvatar(file, String(telegramUser.id)), 15000)
+      
       if (publicUrl) {
         setForm(prev => ({ ...prev, photo_source: 'custom', photo_url: publicUrl }))
       } else {
         setError('Не удалось загрузить фото. Попробуйте еще раз.')
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Upload error:', err)
-      setError('Ошибка загрузки фото')
+      if (err.message === 'Timeout') {
+        setError('Загрузка заняла слишком много времени. Проверьте интернет.')
+      } else {
+        setError('Ошибка загрузки фото. Попробуйте файл поменьше.')
+      }
     } finally {
       setUploading(false)
       // Сброс инпута

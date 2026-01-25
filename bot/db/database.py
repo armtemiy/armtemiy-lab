@@ -33,6 +33,7 @@ engine = create_async_engine(
     echo=False,
     connect_args=connect_args,
     poolclass=NullPool,  # Отключаем пул SQLAlchemy, используем пул Supabase
+    pool_pre_ping=True,  # Проверяем соединение перед использованием (SELECT 1)
 )
 
 AsyncSessionLocal = async_sessionmaker(
