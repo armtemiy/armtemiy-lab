@@ -6,7 +6,8 @@ import {
   upsertSparringProfile,
   geocodeAddress,
   requestGeolocation,
-  reverseGeocode
+  reverseGeocode,
+  uploadAvatar
 } from '../lib/sparring'
 import { getTelegramUser, initTelegram } from '../lib/telegram'
 import type { TelegramUser } from '../lib/telegram'
@@ -56,6 +57,8 @@ export function SparringMyProfilePage() {
   const [geoError, setGeoError] = useState<string | null>(null)
   const [locationDisplay, setLocationDisplay] = useState<string>('')
   const [isEditing, setIsEditing] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     initTelegram()
@@ -210,6 +213,36 @@ export function SparringMyProfilePage() {
       if (geoRequestRef.current !== requestId) return
       setGeoError(err.message || 'Ошибка поиска')
       setGeoStatus('error')
+    }
+  }
+
+  // Загрузка фото из файла
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !telegramUser?.id) return
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Файл слишком большой (макс. 5 МБ)')
+      return
+    }
+
+    setUploading(true)
+    setError(null)
+
+    try {
+      const publicUrl = await uploadAvatar(file, String(telegramUser.id))
+      if (publicUrl) {
+        setForm(prev => ({ ...prev, photo_source: 'custom', photo_url: publicUrl }))
+      } else {
+        setError('Не удалось загрузить фото. Попробуйте еще раз.')
+      }
+    } catch (err) {
+      console.error('Upload error:', err)
+      setError('Ошибка загрузки фото')
+    } finally {
+      setUploading(false)
+      // Сброс инпута
+      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
@@ -665,21 +698,35 @@ export function SparringMyProfilePage() {
                 }`}
               >
                 <p className="text-sm font-medium">🖼️ Своё фото</p>
-                <p className="mt-1 text-xs text-muted">Загрузить URL</p>
+                <p className="mt-1 text-xs text-muted">Загрузить файл</p>
               </button>
             </div>
 
             {form.photo_source === 'custom' && (
               <div className="mt-3">
                 <input
-                  type="url"
-                  value={form.photo_url}
-                  onChange={e => setForm(prev => ({ ...prev, photo_url: e.target.value }))}
-                  placeholder="https://example.com/photo.jpg"
-                  className="input w-full"
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
                 />
-                <p className="mt-1 text-xs text-faint">
-                  Вставьте ссылку на фото (URL изображения)
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="btn-secondary w-full"
+                >
+                  {uploading ? (
+                    <>
+                      <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      Загрузка...
+                    </>
+                  ) : (
+                    '📂 Выбрать из галереи'
+                  )}
+                </button>
+                <p className="mt-2 text-center text-xs text-faint">
+                  JPG, PNG до 5 МБ
                 </p>
               </div>
             )}

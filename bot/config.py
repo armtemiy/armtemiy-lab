@@ -8,4 +8,9 @@ WEBAPP_URL = os.getenv("WEBAPP_URL", "https://armtemiy.github.io/armtemiy-lab/")
 CHANNEL_ID = os.getenv("CHANNEL_ID", "@armtemiy")
 CHANNEL_URL = os.getenv("CHANNEL_URL", "https://t.me/armtemiy")
 DATABASE_URL = os.getenv("DATABASE_URL")
-ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
+
+# Поддержка списка админов через запятую "123,456"
+admin_ids_str = os.getenv("ADMIN_IDS", os.getenv("ADMIN_ID", "0"))
+ADMIN_IDS = [int(x.strip()) for x in admin_ids_str.split(",") if x.strip().isdigit()]
+if not ADMIN_IDS:
+    ADMIN_IDS = []

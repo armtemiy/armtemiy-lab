@@ -76,6 +76,35 @@ export async function getMyProfile(telegramUserId: string): Promise<SparringProf
   return data as SparringProfile | null
 }
 
+// === Загрузка аватара в Storage ===
+export async function uploadAvatar(file: File, userId: string): Promise<string | null> {
+  if (!supabase) return null
+
+  try {
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${userId}-${Date.now()}.${fileExt}`
+    const filePath = `${fileName}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, file)
+
+    if (uploadError) {
+      console.error('Error uploading avatar:', uploadError)
+      throw uploadError
+    }
+
+    const { data } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(filePath)
+
+    return data.publicUrl
+  } catch (error) {
+    console.error('Upload avatar error:', error)
+    return null
+  }
+}
+
 // === Создание или обновление профиля ===
 export async function upsertSparringProfile(
   telegramUserId: string,

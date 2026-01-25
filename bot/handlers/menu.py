@@ -20,13 +20,20 @@ async def cmd_profile(message: Message) -> None:
         user = None
 
     if not user:
+        # Если не удалось получить пользователя из БД, пробуем еще раз без тайм-аута или просто логируем
+        try:
+             # Попытка без жесткого тайм-аута или повтор
+             user = await get_user_snapshot(user_id)
+        except Exception as e:
+             pass
+
+    if not user:
         first_name = message.from_user.first_name or '—'
         text = (
             f"👤 <b>Профиль</b>\n\n"
             f"🆔 ID: <code>{user_id}</code>\n"
-            f"👋 Имя: {first_name}\n"
-            "📅 Регистрация: —\n\n"
-            "База данных отвечает медленно, показываю быстрый режим."
+            f"👋 Имя: {first_name}\n\n"
+            "⚠️ Не удалось загрузить данные из базы. Попробуйте позже."
         )
         await message.answer(text, parse_mode=ParseMode.HTML)
         return
@@ -35,8 +42,13 @@ async def cmd_profile(message: Message) -> None:
         f"👤 <b>Профиль</b>\n\n"
         f"🆔 ID: <code>{user.telegram_id}</code>\n"
         f"👋 Имя: {user.first_name or '—'}\n"
-        f"📅 Регистрация: {user.created_at.strftime('%d.%m.%Y')}"
+        f"📅 Регистрация: {user.created_at.strftime('%d.%m.%Y')}\n"
     )
+
+    if user.sparring_stats:
+        text += f"\n💪 <b>Спарринг-профиль:</b>\n{user.sparring_stats}"
+    else:
+        text += "\n💪 <b>Спарринг-профиль:</b> Не создан"
     
     await message.answer(text, parse_mode=ParseMode.HTML)
 

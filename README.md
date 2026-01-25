@@ -1,75 +1,45 @@
 # Armtemiy Lab
 
-Telegram Mini App (TMA) для тактической диагностики поражений в армрестлинге.
+Telegram Mini App (TMA) для тактической диагностики поражений в армрестлинге и поиска спарринг-партнеров.
 
 ## Модули
 
-- Диагностика поражения (основной).
-- Антропометрия (черновой калькулятор стиля).
-- Контр-матрица (верх > крюк, крюк > пресс, пресс > верх).
-- Админ: загрузка/экспорт JSON дерева (локально, через `localStorage`).
+*   **Диагностика поражения:** Экспертная система для анализа ошибок.
+*   **Поиск спарринг-партнеров:** Карта армрестлеров с фильтрами и анкетами.
+*   **Антропометрия:** Калькулятор для определения предрасположенности к стилям.
+*   **Контр-матрица:** Быстрая справка "что бьет что".
 
-## Запуск локально
+## Ссылки
 
-1. Скопируй `.env.example` в `.env` и заполни значения.
-2. Установи зависимости:
+*   [Бот в Telegram](https://t.me/armtemiy_lab_bot) (Dev)
+*   [Web App](https://armtemiy.github.io/armtemiy-lab/)
 
-```
-npm install
-```
+## Установка и запуск
 
-3. Запусти проект:
+### Frontend (Vite + React)
 
-```
-npm run dev
-```
+1.  Скопируйте `.env.example` в `.env` и заполните ключи Supabase.
+2.  `npm install`
+3.  `npm run dev`
 
-## Переменные окружения
+### Бот (Python + Aiogram)
 
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
-- `VITE_ADMIN_IDS` (через запятую)
-- `VITE_BOT_USERNAME` (username бота для открытия WebApp)
-
-## Шаблон дерева логики
-
-Готовый шаблон JSON находится в `assets/diagnostic-template.json`.
-Его можно загрузить через админ-модуль или использовать как основу.
-
-## Supabase
-
-- Схема: `supabase/schema.sql`
-- Миграция: `supabase/migrations/*.sql`
-- Таблица результатов: `diagnostic_results`
+1.  `cd bot`
+2.  `python -m venv .venv`
+3.  `.venv/Scripts/activate`
+4.  `pip install -r requirements.txt`
+5.  Создайте `bot/.env` (см. `bot/.env.example`).
+6.  `python main.py`
 
 ## Документация
 
-- `docs/ADMIN.md` — админ-модуль и загрузка JSON
-- `docs/ANTHRO.md` — логика антропометрии
+*   [Модуль Спарринга](docs/SPARRING.md)
+*   [Админ-панель Web](docs/ADMIN.md)
+*   [Антропометрия](docs/ANTHRO.md)
 
-## Деплой на GitHub Pages
+## Команды бота
 
-В репозитории настроен GitHub Actions workflow.
-После пуша в `main` автоматически соберется и задеплоится Pages.
-
-## Бот (aiogram)
-
-Папка: `bot/`
-
-Запуск локально:
-
-```
-python -m venv bot/.venv
-bot/.venv/Scripts/pip install -r bot/requirements.txt
-copy bot/.env.example bot/.env
-bot/.venv/Scripts/python bot/main.py
-```
-
-Переменные:
-
-- `BOT_TOKEN`
-- `WEBAPP_URL`
-
-## Важно
-
-Никогда не коммить секретные ключи или токен бота.
+*   `/start` - Главное меню
+*   `/profile` - Профиль пользователя (статистика + спарринг)
+*   `/admin` - Панель администратора (только для админов)
+*   `/info` - Информация о проекте

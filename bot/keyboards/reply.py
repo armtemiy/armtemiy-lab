@@ -1,5 +1,5 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
-from bot.config import ADMIN_ID, WEBAPP_URL
+from bot.config import ADMIN_IDS, WEBAPP_URL
 
 def get_main_menu_keyboard(user_id: int) -> ReplyKeyboardMarkup:
     """
@@ -16,7 +16,7 @@ def get_main_menu_keyboard(user_id: int) -> ReplyKeyboardMarkup:
     ]
     
     # Добавляем кнопку админки если юзер админ
-    if user_id == ADMIN_ID:
+    if user_id in ADMIN_IDS:
         keyboard.append([KeyboardButton(text="⚙️ Админка")])
     
     return ReplyKeyboardMarkup(

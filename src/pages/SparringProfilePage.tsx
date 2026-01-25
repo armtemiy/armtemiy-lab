@@ -117,15 +117,15 @@ export function SparringProfilePage() {
           </div>
 
           {/* Info */}
-          <div className="px-5 pb-6 text-center">
+          <div className="px-5 pb-8 text-center">
             {/* Name & Username */}
-            <h1 className="text-2xl font-bold text-[color:var(--text-primary)]">
+            <h1 className="text-3xl font-bold text-[color:var(--text-primary)]">
               {profile.first_name} {profile.last_name}
             </h1>
-            <p className="text-sm font-medium text-[color:var(--accent)]">@{profile.telegram_username}</p>
+            <p className="mt-1 text-base font-medium text-[color:var(--accent)]">@{profile.telegram_username}</p>
             
             {/* Style Badge */}
-            <div className="mt-3 flex justify-center">
+            <div className="mt-4 flex justify-center">
               <span 
                 className="rounded-full px-4 py-1.5 text-sm font-bold text-white shadow-sm"
                 style={{ background: styleColor }}
@@ -136,7 +136,7 @@ export function SparringProfilePage() {
 
             {/* Location */}
             {(profile.city || profile.district) && (
-              <div className="mt-4 flex justify-center gap-2 text-sm text-[color:var(--text-secondary)]">
+              <div className="mt-4 flex items-center justify-center gap-2 text-sm text-[color:var(--text-secondary)] opacity-80">
                 <span>📍</span>
                 <span className="font-medium">
                   {profile.city}
@@ -146,51 +146,53 @@ export function SparringProfilePage() {
             )}
 
             {/* Stats Grid */}
-            <div className="mt-8 grid grid-cols-3 gap-3">
-              <div className="rounded-xl bg-[color:var(--background)] p-4 text-center shadow-inner">
-                <p className="text-2xl font-bold text-[color:var(--text-primary)]">
+            <div className="mt-8 grid grid-cols-3 gap-4">
+              <div className="flex flex-col items-center justify-center rounded-2xl bg-[color:var(--background)] p-4 shadow-inner">
+                <span className="text-2xl font-bold text-[color:var(--text-primary)] leading-none">
                   {profile.weight_kg ? `${profile.weight_kg}` : '—'}
-                </p>
-                <p className="mt-1 text-xs font-medium text-[color:var(--text-secondary)]">кг</p>
+                </span>
+                <span className="mt-1.5 text-[10px] uppercase tracking-wider font-bold text-[color:var(--text-secondary)] opacity-60">
+                  Вес (кг)
+                </span>
               </div>
-              <div className="rounded-xl bg-[color:var(--background)] p-4 text-center shadow-inner">
-                <p className="text-2xl font-bold text-[color:var(--text-primary)]">
+              <div className="flex flex-col items-center justify-center rounded-2xl bg-[color:var(--background)] p-4 shadow-inner">
+                <span className="text-xl font-bold text-[color:var(--text-primary)] leading-none">
                   {handLabels[profile.hand]}
-                </p>
-                <p className="mt-1 text-xs font-medium text-[color:var(--text-secondary)]">рука</p>
+                </span>
+                <span className="mt-1.5 text-[10px] uppercase tracking-wider font-bold text-[color:var(--text-secondary)] opacity-60">
+                  Рука
+                </span>
               </div>
-              <div className="rounded-xl bg-[color:var(--background)] p-4 text-center shadow-inner">
-                <p className="text-2xl font-bold text-[color:var(--text-primary)]">
-                  {formatExperience(profile.experience_years)}
-                </p>
-                <p className="mt-1 text-xs font-medium text-[color:var(--text-secondary)]">стаж</p>
+              <div className="flex flex-col items-center justify-center rounded-2xl bg-[color:var(--background)] p-4 shadow-inner">
+                <span className="text-2xl font-bold text-[color:var(--text-primary)] leading-none">
+                  {formatExperience(profile.experience_years).replace(/\D/g, '')}
+                  <span className="text-sm font-medium ml-0.5">
+                     {profile.experience_years < 1 ? 'мес' : 'г'}
+                  </span>
+                </span>
+                <span className="mt-1.5 text-[10px] uppercase tracking-wider font-bold text-[color:var(--text-secondary)] opacity-60">
+                  Стаж
+                </span>
               </div>
             </div>
 
             {/* Weight in both units */}
             {profile.weight_kg && (
-              <p className="mt-3 text-center text-xs text-[color:var(--text-secondary)]">
+              <p className="mt-3 text-center text-xs font-medium text-[color:var(--text-secondary)] opacity-50">
                 {formatWeight(profile.weight_kg)}
               </p>
             )}
 
             {/* Style Description */}
-            <div className="mt-6">
-              <h3 className="text-sm font-semibold text-[color:var(--text-secondary)]">Стиль борьбы</h3>
+            <div className="mt-8 text-left">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[color:var(--text-secondary)] opacity-60 mb-3">
+                Стиль борьбы
+              </h3>
               <div 
-                className="mt-3 rounded-xl border-2 p-4"
-                style={{ borderColor: `${styleColor}50` }}
+                className="rounded-2xl border-l-4 bg-[color:var(--background)] p-4 shadow-sm"
+                style={{ borderLeftColor: styleColor }}
               >
-                <div className="flex items-center gap-2">
-                  <span 
-                    className="h-3 w-3 rounded-full" 
-                    style={{ background: styleColor }}
-                  />
-                  <span className="text-base font-semibold text-[color:var(--text-primary)]">
-                    {styleInfo.name}
-                  </span>
-                </div>
-                <p className="mt-2 text-sm leading-relaxed text-[color:var(--text-secondary)]">
+                <p className="text-sm leading-relaxed text-[color:var(--text-primary)] font-medium">
                   {styleInfo.description}
                 </p>
               </div>
@@ -198,9 +200,11 @@ export function SparringProfilePage() {
 
             {/* Bio */}
             {profile.bio && (
-              <div className="mt-6">
-                <h3 className="text-sm font-semibold text-[color:var(--text-secondary)]">О себе</h3>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[color:var(--text-primary)]">
+              <div className="mt-6 text-left">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[color:var(--text-secondary)] opacity-60 mb-3">
+                  О себе
+                </h3>
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-[color:var(--text-primary)] bg-[color:var(--background)] p-4 rounded-2xl shadow-sm">
                   {profile.bio}
                 </p>
               </div>
@@ -209,13 +213,13 @@ export function SparringProfilePage() {
             {/* Contact Button */}
             <button
               onClick={handleContactTelegram}
-              className="btn-primary mt-8 w-full text-base font-semibold shadow-md"
+              className="btn-primary mt-10 w-full py-4 text-lg font-bold shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-transform"
             >
               ✉️ Написать в Telegram
             </button>
 
             {/* Member since */}
-            <p className="mt-4 text-center text-xs text-[color:var(--text-secondary)]">
+            <p className="mt-6 text-center text-xs font-medium text-[color:var(--text-secondary)] opacity-40">
               На карте с {new Date(profile.created_at).toLocaleDateString('ru-RU', {
                 day: 'numeric',
                 month: 'long',

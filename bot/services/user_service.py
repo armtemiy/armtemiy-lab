@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import DBAPIError
 
 from bot.db.database import AsyncSessionLocal
-from bot.db.models import User
+from bot.db.models import User, SparringProfile
 
 USER_CACHE_TTL = int(os.getenv("USER_CACHE_TTL", "300"))
 
@@ -20,6 +20,7 @@ class UserSnapshot:
     first_name: str | None
     created_at: datetime
     subscription_status: bool
+    sparring_stats: str | None = None  # Строка с кратким инфо о спарринге
 
 
 _user_cache: Dict[int, Tuple[float, UserSnapshot]] = {}
@@ -40,13 +41,14 @@ def _set_cached_user(snapshot: UserSnapshot) -> None:
     _user_cache[snapshot.telegram_id] = (time(), snapshot)
 
 
-def _make_snapshot(user: User) -> UserSnapshot:
+def _make_snapshot(user: User, sparring_info: str | None = None) -> UserSnapshot:
     return UserSnapshot(
         telegram_id=user.telegram_id,
         username=user.username,
         first_name=user.first_name,
         created_at=user.created_at,
         subscription_status=user.subscription_status,
+        sparring_stats=sparring_info
     )
 
 
@@ -57,11 +59,25 @@ async def get_user_snapshot(telegram_id: int) -> UserSnapshot | None:
 
     try:
         async with AsyncSessionLocal() as session:
+            # Получаем пользователя
             result = await session.execute(select(User).where(User.telegram_id == telegram_id))
             user = result.scalar_one_or_none()
             if not user:
                 return None
-            snapshot = _make_snapshot(user)
+
+            # Получаем спарринг профиль
+            sparring_result = await session.execute(
+                select(SparringProfile).where(SparringProfile.telegram_user_id == str(telegram_id))
+            )
+            sparring = sparring_result.scalar_one_or_none()
+            
+            sparring_info = None
+            if sparring and sparring.is_active:
+                style_map = {"outside": "Аутсайд", "inside": "Инсайд", "both": "Универсал"}
+                style_name = style_map.get(sparring.style, sparring.style)
+                sparring_info = f"{style_name}, {sparring.weight_kg}кг, стаж {sparring.experience_years}г"
+
+            snapshot = _make_snapshot(user, sparring_info)
             _set_cached_user(snapshot)
             return snapshot
     except (DBAPIError, OSError, Exception) as e:
@@ -84,7 +100,7 @@ async def get_or_create_user(telegram_id: int, username: str | None = None, firs
                     user.username = username
                     user.first_name = first_name
                     await session.commit()
-                _set_cached_user(_make_snapshot(user))
+                # Не обновляем кэш тут, так как нет данных о спарринге
                 return user
 
             new_user = User(
@@ -96,7 +112,7 @@ async def get_or_create_user(telegram_id: int, username: str | None = None, firs
             session.add(new_user)
             await session.commit()
             await session.refresh(new_user)
-            _set_cached_user(_make_snapshot(new_user))
+            # Не кэшируем тут, чтобы при следующем запросе подтянулся и спарринг профиль (если есть)
             return new_user
     except (DBAPIError, OSError, Exception) as e:
         print(f"user_service error: {e}")

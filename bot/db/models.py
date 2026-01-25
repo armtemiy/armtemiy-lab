@@ -25,3 +25,15 @@ class RateLimitEntry(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     telegram_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+class SparringProfile(Base):
+    """Модель спарринг-профиля (зеркало таблицы Supabase)"""
+    __tablename__ = "sparring_profiles"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)  # uuid
+    telegram_user_id: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    first_name: Mapped[str] = mapped_column(String, nullable=False)
+    weight_kg: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    experience_years: Mapped[float | None] = mapped_column(Integer, nullable=True)
+    style: Mapped[str | None] = mapped_column(String, nullable=True)
+    is_active: Mapped[bool] = mapped_column(default=True)
