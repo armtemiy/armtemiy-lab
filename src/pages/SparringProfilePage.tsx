@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { getSparringProfileById } from '../lib/sparring'
 import type { SparringProfile } from '../types'
-import { styleLabels, handLabels, formatWeight, formatExperience } from '../types'
+import { styleLabels, handLabels, formatWeight } from '../types'
 import { fadeUp } from '../ui'
 
 export function SparringProfilePage() {
@@ -165,9 +165,9 @@ export function SparringProfilePage() {
               </div>
               <div className="flex flex-col items-center justify-center rounded-2xl bg-[color:var(--background)] p-4 shadow-inner">
                 <span className="text-2xl font-bold text-[color:var(--text-primary)] leading-none">
-                  {formatExperience(profile.experience_years).replace(/\D/g, '')}
+                  {profile.experience_years}
                   <span className="text-sm font-medium ml-0.5">
-                     {profile.experience_years < 1 ? 'мес' : 'г'}
+                     {profile.experience_years < 1 ? 'мес' : profile.experience_years < 5 ? 'г' : 'лет'}
                   </span>
                 </span>
                 <span className="mt-1.5 text-[10px] uppercase tracking-wider font-bold text-[color:var(--text-secondary)] opacity-60">

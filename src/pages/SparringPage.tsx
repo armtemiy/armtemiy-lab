@@ -2,7 +2,7 @@ import { useState, useEffect, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { getAllSparringProfiles, getMyProfile } from '../lib/sparring'
-import { getTelegramUser } from '../lib/telegram'
+import { getTelegramUser, initTelegram } from '../lib/telegram'
 import type { SparringProfile } from '../types'
 import { fadeUp } from '../ui'
 
@@ -16,7 +16,24 @@ export function SparringPage() {
   const [profiles, setProfiles] = useState<SparringProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [hasMyProfile, setHasMyProfile] = useState(false)
-  const telegramUser = getTelegramUser()
+  const [telegramUserId, setTelegramUserId] = useState<number | null>(null)
+
+  useEffect(() => {
+    initTelegram()
+    
+    // Пытаемся получить юзера сразу
+    const user = getTelegramUser()
+    if (user?.id) {
+      setTelegramUserId(user.id)
+    } else {
+      // Если нет, пробуем чуть позже (костыль для инициализации скрипта)
+      const timer = setTimeout(() => {
+        const u = getTelegramUser()
+        if (u?.id) setTelegramUserId(u.id)
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [])
 
   useEffect(() => {
     const cached = readCache()
@@ -27,7 +44,7 @@ export function SparringPage() {
     }
     // Всегда загружаем свежие данные из БД
     loadData(cached.length === 0)
-  }, [])
+  }, [telegramUserId]) // Перезагружаем/проверяем когда появился юзер
 
   async function loadData(showLoading: boolean) {
     if (showLoading) setLoading(true)
@@ -38,10 +55,20 @@ export function SparringPage() {
       setProfiles(allProfiles)
       writeCache(allProfiles)
 
-      if (telegramUser?.id) {
-        const myProfile = await getMyProfile(String(telegramUser.id))
-        console.log('[SparringPage] My profile exists:', !!myProfile)
-        setHasMyProfile(!!myProfile)
+      const currentUserId = telegramUserId || getTelegramUser()?.id
+      if (currentUserId) {
+        // Проверяем, есть ли профиль в загруженном списке (оптимизация)
+        const profileInList = allProfiles.find(p => p.telegram_user_id === String(currentUserId))
+        
+        if (profileInList) {
+           console.log('[SparringPage] Found my profile in list')
+           setHasMyProfile(true)
+        } else {
+           // Если нет в списке (например, скрыт или пагинация в будущем), проверяем отдельно
+           const myProfile = await getMyProfile(String(currentUserId))
+           console.log('[SparringPage] My profile fetch result:', !!myProfile)
+           setHasMyProfile(!!myProfile)
+        }
       }
     } catch (error) {
       console.error('Error loading sparring data:', error)
