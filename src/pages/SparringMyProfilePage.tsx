@@ -674,25 +674,33 @@ export function SparringMyProfilePage() {
             )}
 
             {/* Preview */}
-            {(form.photo_source === 'telegram' || form.photo_url) && (
-              <div className="mt-3 flex items-center gap-3">
-                <div className="h-12 w-12 overflow-hidden rounded-full bg-[color:var(--surface-elevated)]">
-                  {form.photo_url ? (
-                    <img src={form.photo_url} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-lg font-bold text-muted">
-                      {form.first_name?.[0] || '?'}
-                    </div>
-                  )}
-                </div>
+            <div className="mt-4 flex items-center gap-4 rounded-xl bg-[color:var(--surface)] p-3 shadow-inner">
+              <div className="h-16 w-16 overflow-hidden rounded-full border-2 border-[color:var(--border)] shadow-sm">
+                {form.photo_url ? (
+                  <img src={form.photo_url} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[color:var(--accent)] to-purple-600 text-xl font-bold text-white">
+                    {form.first_name?.[0]?.toUpperCase() || '?'}
+                  </div>
+                )}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-[color:var(--text-primary)]">
+                  {form.photo_source === 'telegram' ? 'Фото профиля' : 'Своя ссылка'}
+                </p>
                 <p className="text-xs text-muted">
-                  {form.photo_source === 'telegram' 
-                    ? 'Будет использован аватар из Telegram' 
-                    : 'Предпросмотр фото'
-                  }
+                  {form.photo_url ? 'Изображение загружено' : 'Нет изображения'}
                 </p>
               </div>
-            )}
+              {form.photo_source === 'telegram' && telegramUser?.photo_url && form.photo_url !== telegramUser.photo_url && (
+                <button
+                  onClick={() => setForm(prev => ({ ...prev, photo_url: telegramUser.photo_url || '' }))}
+                  className="rounded-lg bg-[color:var(--surface-elevated)] px-3 py-1.5 text-xs font-medium text-[color:var(--accent)] hover:bg-[color:var(--accent)]/10"
+                >
+                  Обновить
+                </button>
+              )}
+            </div>
           </section>
 
           {/* Save Button */}

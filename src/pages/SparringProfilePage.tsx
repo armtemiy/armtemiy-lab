@@ -86,18 +86,18 @@ export function SparringProfilePage() {
         </header>
 
         {/* Profile Card */}
-        <div className="card overflow-hidden">
+        <div className="card overflow-visible bg-[color:var(--surface)] shadow-xl ring-1 ring-white/5">
           {/* Hero Background */}
           <div 
-            className="-mx-5 -mt-5 h-32 bg-gradient-to-br"
+            className="h-32 w-full rounded-t-2xl bg-gradient-to-br"
             style={{ 
-              background: `linear-gradient(135deg, ${styleColor}50, ${styleColor}15)` 
+              background: `linear-gradient(135deg, ${styleColor}40, ${styleColor}10)` 
             }}
           />
 
-          {/* Avatar Container */}
-          <div className="relative -mt-12 px-0.5 z-10">
-            <div className="h-24 w-24 overflow-hidden rounded-full border-4 border-[color:var(--surface)] bg-[color:var(--surface-elevated)] shadow-lg">
+          {/* Avatar Container - Absolute Positioning for perfect layering */}
+          <div className="relative -mt-16 mb-3 flex justify-center px-4">
+            <div className="relative z-10 h-32 w-32 overflow-hidden rounded-full border-[6px] border-[color:var(--surface)] bg-[color:var(--surface-elevated)] shadow-2xl">
               {profile.photo_url ? (
                 <img 
                   src={profile.photo_url} 
@@ -105,26 +105,29 @@ export function SparringProfilePage() {
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <div className="flex h-full w-full items-center justify-center pb-1 text-3xl font-bold leading-none text-[color:var(--text-primary)]">
-                  {profile.first_name[0]}
-                  {profile.last_name?.[0] || ''}
+                <div 
+                  className="flex h-full w-full items-center justify-center text-4xl font-bold text-white"
+                  style={{ background: `linear-gradient(135deg, ${styleColor}, ${styleColor}80)` }}
+                >
+                  {profile.first_name[0].toUpperCase()}
+                  {profile.last_name?.[0]?.toUpperCase() || ''}
                 </div>
               )}
             </div>
           </div>
 
           {/* Info */}
-          <div className="mt-4">
+          <div className="px-5 pb-6 text-center">
             {/* Name & Username */}
-            <div className="flex items-start justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-[color:var(--text-primary)]">
-                  {profile.first_name} {profile.last_name}
-                </h1>
-                <p className="mt-0.5 text-sm text-[color:var(--text-secondary)]">@{profile.telegram_username}</p>
-              </div>
+            <h1 className="text-2xl font-bold text-[color:var(--text-primary)]">
+              {profile.first_name} {profile.last_name}
+            </h1>
+            <p className="text-sm font-medium text-[color:var(--accent)]">@{profile.telegram_username}</p>
+            
+            {/* Style Badge */}
+            <div className="mt-3 flex justify-center">
               <span 
-                className="rounded-full px-3 py-1.5 text-xs font-semibold text-white shadow-sm"
+                className="rounded-full px-4 py-1.5 text-sm font-bold text-white shadow-sm"
                 style={{ background: styleColor }}
               >
                 {styleInfo.name}
@@ -133,7 +136,7 @@ export function SparringProfilePage() {
 
             {/* Location */}
             {(profile.city || profile.district) && (
-              <div className="mt-3 flex items-center gap-2 text-sm text-[color:var(--text-secondary)]">
+              <div className="mt-4 flex justify-center gap-2 text-sm text-[color:var(--text-secondary)]">
                 <span>📍</span>
                 <span className="font-medium">
                   {profile.city}
@@ -143,20 +146,20 @@ export function SparringProfilePage() {
             )}
 
             {/* Stats Grid */}
-            <div className="mt-6 grid grid-cols-3 gap-3">
-              <div className="rounded-xl bg-[color:var(--surface-elevated)] p-4 text-center shadow-sm">
+            <div className="mt-8 grid grid-cols-3 gap-3">
+              <div className="rounded-xl bg-[color:var(--background)] p-4 text-center shadow-inner">
                 <p className="text-2xl font-bold text-[color:var(--text-primary)]">
                   {profile.weight_kg ? `${profile.weight_kg}` : '—'}
                 </p>
                 <p className="mt-1 text-xs font-medium text-[color:var(--text-secondary)]">кг</p>
               </div>
-              <div className="rounded-xl bg-[color:var(--surface-elevated)] p-4 text-center shadow-sm">
+              <div className="rounded-xl bg-[color:var(--background)] p-4 text-center shadow-inner">
                 <p className="text-2xl font-bold text-[color:var(--text-primary)]">
                   {handLabels[profile.hand]}
                 </p>
                 <p className="mt-1 text-xs font-medium text-[color:var(--text-secondary)]">рука</p>
               </div>
-              <div className="rounded-xl bg-[color:var(--surface-elevated)] p-4 text-center shadow-sm">
+              <div className="rounded-xl bg-[color:var(--background)] p-4 text-center shadow-inner">
                 <p className="text-2xl font-bold text-[color:var(--text-primary)]">
                   {formatExperience(profile.experience_years)}
                 </p>
