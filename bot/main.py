@@ -1,84 +1,50 @@
 import asyncio
-import os
+import sys
+from aiogram import Bot, Dispatcher
+from loguru import logger
 
-from aiogram import Bot, Dispatcher, F
-from aiogram.filters import CommandStart
-from aiogram.types import KeyboardButton, Message, ReplyKeyboardMarkup
+from bot.config import BOT_TOKEN
+from bot.db.database import init_db
+from bot.middlewares.spam_protection import SpamProtectionMiddleware
+from bot.handlers import start, menu, admin
 
-
-BOT_TOKEN = os.getenv("BOT_TOKEN", "")
-WEBAPP_URL = os.getenv("WEBAPP_URL", "https://armtemiy.github.io/armtemiy-lab/")
-
-
-def build_main_keyboard() -> ReplyKeyboardMarkup:
-    return ReplyKeyboardMarkup(
-        keyboard=[
-            [
-                KeyboardButton(text="Профиль"),
-                KeyboardButton(text="Инфо"),
-            ]
-        ],
-        resize_keyboard=True,
-        one_time_keyboard=False,
-        selective=False,
-    )
-
-
-async def start_handler(message: Message) -> None:
-    user = message.from_user
-    name = user.first_name if user else "там"
-    text = (
-        f"Привет, {name}. Я Armtemiy Lab — тактический бот для армрестлинга.\n"
-        "Помогаю быстро разобрать поражение и понять, что делать дальше.\n"
-        f"Мини-приложение: {WEBAPP_URL}"
-    )
-    await message.answer(text, reply_markup=build_main_keyboard())
-
-
-async def profile_handler(message: Message) -> None:
-    user = message.from_user
-    if not user:
-        await message.answer("Не вижу данные профиля.")
-        return
-
-    username_line = f"Username: @{user.username}" if user.username else "Username: -"
-    profile = (
-        "Профиль\n"
-        f"ID: {user.id}\n"
-        f"Имя: {user.first_name or '-'}\n"
-        f"{username_line}"
-    )
-    await message.answer(profile)
-
-
-async def info_handler(message: Message) -> None:
-    text = (
-        "Инфо\n"
-        "1) Диагностика поражения за 60 секунд.\n"
-        "2) Антропометрия и контр-матрица.\n"
-        f"Открой мини-приложение: {WEBAPP_URL}"
-    )
-    await message.answer(text)
-
-
-async def fallback_handler(message: Message) -> None:
-    await message.answer("Используй кнопки: Профиль или Инфо.")
-
+# Настройка логирования
+logger.remove()
+logger.add(
+    sys.stdout,
+    format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
+    level="INFO"
+)
+logger.add("logs/bot.log", rotation="10 MB", level="DEBUG")
 
 async def main() -> None:
     if not BOT_TOKEN:
-        raise RuntimeError("BOT_TOKEN is missing")
+        logger.error("BOT_TOKEN is missing!")
+        return
 
-    bot = Bot(BOT_TOKEN)
+    # Инициализация БД
+    try:
+        await init_db()
+        logger.info("Database initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize database: {e}")
+
+    bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher()
 
-    dp.message.register(start_handler, CommandStart())
-    dp.message.register(profile_handler, F.text == "Профиль")
-    dp.message.register(info_handler, F.text == "Инфо")
-    dp.message.register(fallback_handler)
+    # Middleware
+    dp.update.middleware(SpamProtectionMiddleware())
 
+    # Роутеры
+    dp.include_router(start.router)
+    dp.include_router(menu.router)
+    dp.include_router(admin.router)
+
+    logger.info("Bot started polling...")
     await dp.start_polling(bot)
 
-
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Bot stopped by user")

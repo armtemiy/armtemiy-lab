@@ -143,6 +143,40 @@ body {
     color: var(--color-error);
   }
 
+  .btn-secondary {
+    @apply w-full rounded-2xl border px-4 py-3 text-sm font-medium transition-colors;
+    border-color: var(--color-border);
+    background: var(--color-surface-elevated);
+    color: var(--text-primary);
+  }
+
+  .btn-secondary:hover {
+    background: var(--color-surface);
+    border-color: var(--color-accent);
+  }
+
+  .btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .input {
+    @apply rounded-xl border px-4 py-3 text-sm transition-colors;
+    border-color: var(--color-border);
+    background: var(--color-surface-elevated);
+    color: var(--text-primary);
+  }
+
+  .input::placeholder {
+    color: var(--text-faint);
+  }
+
+  .input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 2px hsl(5 85% 60% / 0.2);
+  }
+
   .text-muted {
     color: var(--text-muted);
   }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { diagnosticTree } from './data/diagnosticTree'
 import type { DiagnosticTree } from './data/diagnosticTree'
@@ -10,6 +11,9 @@ import { AdminModule } from './modules/AdminModule'
 import { AnthroModule } from './modules/AnthroModule'
 import { CounterModule } from './modules/CounterModule'
 import { DiagnosticWizard } from './modules/DiagnosticWizard'
+import { SparringPage } from './pages/SparringPage'
+import { SparringMyProfilePage } from './pages/SparringMyProfilePage'
+import { SparringProfilePage } from './pages/SparringProfilePage'
 import type { TreeSource, WebAppStatus } from './types'
 import { fadeUp } from './ui'
 
@@ -17,12 +21,13 @@ type View = 'home' | 'wizard' | 'anthro' | 'counter' | 'admin'
 
 const treeStorageKey = 'armtemiy_lab_tree_override'
 
-function App() {
-  const [view, setView] = useState<View>('home')
+function HomePage() {
+  const navigate = useNavigate()
   const [telegramUser, setTelegramUser] = useState<TelegramUser | null>(null)
   const [premiumUnlocked, setPremiumUnlocked] = useState(false)
   const [tree, setTree] = useState<DiagnosticTree>(diagnosticTree)
   const [treeSource, setTreeSource] = useState<TreeSource>('default')
+  const [view, setView] = useState<View>('home')
   const [webAppStatus, setWebAppStatus] = useState<WebAppStatus>({
     available: false,
     openInvoice: false,
@@ -143,6 +148,15 @@ function App() {
                     actionLabel="Открыть"
                     onAction={() => setView('counter')}
                   />
+                  
+                  {/* НОВЫЙ МОДУЛЬ: Поиск спарринг-партнёров */}
+                  <ModuleCard
+                    title="Найти спарринг-партнёра"
+                    description="Карта армрестлеров рядом с тобой."
+                    actionLabel="Открыть"
+                    onAction={() => navigate('/sparring')}
+                  />
+
                   {isAdmin && (
                     <ModuleCard
                       title="Админ: Логика"
@@ -172,7 +186,7 @@ function App() {
                 onExit={() => setView('home')}
                 onUnlock={() => setPremiumUnlocked(true)}
                 isAdmin={isAdmin}
-                telegramUserId={telegramUser?.id ?? null}
+                telegramUserId={telegramUser?.id ? String(telegramUser.id) : null}
                 telegramUsername={telegramUser?.username ?? null}
                 webAppStatus={webAppStatus}
               />
@@ -213,6 +227,41 @@ function App() {
         </AnimatePresence>
       </div>
     </div>
+  )
+}
+
+function App() {
+  const location = useLocation()
+
+  // Инициализация Telegram WebApp при старте
+  useEffect(() => {
+    initTelegram()
+    
+    // Применяем тему
+    const webApp = (window as any)?.Telegram?.WebApp
+    const applyTheme = (nextScheme?: string) => {
+      const fallback = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+      const scheme = nextScheme === 'light' || nextScheme === 'dark' ? nextScheme : fallback
+      document.documentElement.dataset.theme = scheme
+    }
+    applyTheme(webApp?.colorScheme)
+
+    if (webApp?.onEvent) {
+      webApp.onEvent('themeChanged', () => {
+        applyTheme(webApp?.colorScheme)
+      })
+    }
+  }, [])
+
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/sparring" element={<SparringPage />} />
+        <Route path="/sparring/my-profile" element={<SparringMyProfilePage />} />
+        <Route path="/sparring/profile/:id" element={<SparringProfilePage />} />
+      </Routes>
+    </AnimatePresence>
   )
 }
 
