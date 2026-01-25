@@ -1,5 +1,6 @@
 import asyncio
 from aiogram import Router, F
+from aiogram.filters import Command
 from aiogram.types import Message
 from aiogram.enums import ParseMode
 
@@ -7,6 +8,7 @@ from bot.services.user_service import get_user_snapshot
 
 router = Router()
 
+@router.message(Command("profile"))
 @router.message(F.text == "👤 Профиль")
 async def cmd_profile(message: Message) -> None:
     user_id = message.from_user.id
@@ -38,6 +40,7 @@ async def cmd_profile(message: Message) -> None:
     
     await message.answer(text, parse_mode=ParseMode.HTML)
 
+@router.message(Command("info"))
 @router.message(F.text == "ℹ️ Инфо")
 async def cmd_info(message: Message) -> None:
     text = (

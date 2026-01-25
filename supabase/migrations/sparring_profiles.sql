@@ -1,6 +1,9 @@
 -- Sparring Profiles для Armtemiy Lab v2.0
 -- Поиск спарринг-партнёров
 
+-- Полная пересборка таблицы (для чистого запуска)
+drop table if exists public.sparring_profiles cascade;
+
 -- Таблица sparring_profiles
 create table if not exists public.sparring_profiles (
   id uuid primary key default gen_random_uuid(),

@@ -21,11 +21,45 @@ export const initTelegram = () => {
   }
 }
 
+const parseUserFromInitData = (): TelegramUser | null => {
+  try {
+    const searchParams = new URLSearchParams(window.location.search)
+    let initData = searchParams.get('tgWebAppData')
+
+    if (!initData && window.location.hash) {
+      const hash = window.location.hash
+      const queryIndex = hash.indexOf('?')
+      const hashQuery = queryIndex >= 0 ? hash.slice(queryIndex + 1) : hash.slice(1)
+      const hashParams = new URLSearchParams(hashQuery)
+      initData = hashParams.get('tgWebAppData')
+    }
+
+    if (!initData) return null
+
+    const initDataParams = new URLSearchParams(initData)
+    const userParam = initDataParams.get('user')
+    if (!userParam) return null
+
+    const parsedUser = JSON.parse(decodeURIComponent(userParam))
+    if (!parsedUser?.id) return null
+
+    return {
+      id: Number(parsedUser.id),
+      username: parsedUser.username,
+      first_name: parsedUser.first_name,
+      last_name: parsedUser.last_name,
+      photo_url: parsedUser.photo_url,
+    }
+  } catch {
+    return null
+  }
+}
+
 export const getTelegramUser = (): TelegramUser | null => {
   try {
     const webApp = (window as any)?.Telegram?.WebApp
     const user = webApp?.initDataUnsafe?.user
-    if (!user?.id) return null
+    if (!user?.id) return parseUserFromInitData()
     return {
       id: user.id,
       username: user.username,
@@ -34,7 +68,7 @@ export const getTelegramUser = (): TelegramUser | null => {
       photo_url: user.photo_url,
     }
   } catch {
-    return null
+    return parseUserFromInitData()
   }
 }
 

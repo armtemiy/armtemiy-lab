@@ -42,6 +42,7 @@ export function SparringMyProfilePage() {
   const [telegramUser, setTelegramUser] = useState<TelegramUser | null>(null)
   const [telegramReady, setTelegramReady] = useState(false)
   const [telegramAttempts, setTelegramAttempts] = useState(0)
+  const maxTelegramAttempts = 12
 
   const [form, setForm] = useState<SparringProfileForm>(initialForm)
   const [loading, setLoading] = useState(true)
@@ -67,7 +68,7 @@ export function SparringMyProfilePage() {
       }
       attempts += 1
       setTelegramAttempts(attempts)
-      if (attempts >= 5) {
+      if (attempts >= maxTelegramAttempts) {
         setTelegramReady(true)
         return
       }
@@ -250,7 +251,7 @@ export function SparringMyProfilePage() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-[color:var(--accent)] border-t-transparent" />
-        <p className="text-xs text-faint">Подключаем Telegram… ({telegramAttempts}/5)</p>
+        <p className="text-xs text-faint">Подключаем Telegram… ({telegramAttempts}/{maxTelegramAttempts})</p>
       </div>
     )
   }
