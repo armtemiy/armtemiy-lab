@@ -1,23 +1,32 @@
+import asyncio
 from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.enums import ParseMode
-from sqlalchemy import select
 
-from bot.db.database import AsyncSessionLocal
-from bot.db.models import User
+from bot.services.user_service import get_user_snapshot
 
 router = Router()
 
 @router.message(F.text == "👤 Профиль")
 async def cmd_profile(message: Message) -> None:
     user_id = message.from_user.id
-    
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(select(User).where(User.telegram_id == user_id))
-        user = result.scalar_one_or_none()
-    
+
+    user = None
+    try:
+        user = await asyncio.wait_for(get_user_snapshot(user_id), timeout=1.2)
+    except asyncio.TimeoutError:
+        user = None
+
     if not user:
-        await message.answer("Профиль не найден. Нажми /start")
+        first_name = message.from_user.first_name or '—'
+        text = (
+            f"👤 <b>Профиль</b>\n\n"
+            f"🆔 ID: <code>{user_id}</code>\n"
+            f"👋 Имя: {first_name}\n"
+            "📅 Регистрация: —\n\n"
+            "База данных отвечает медленно, показываю быстрый режим."
+        )
+        await message.answer(text, parse_mode=ParseMode.HTML)
         return
 
     text = (
@@ -34,6 +43,7 @@ async def cmd_info(message: Message) -> None:
     text = (
         "ℹ️ <b>Контакты</b>\n\n"
         "📢 Канал: @armtemiy\n"
-        "💬 Чат: https://t.me/+Rh5ng2X8R1k5OTJi"
+        "💬 Чат: https://t.me/+Rh5ng2X8R1k5OTJi\n\n"
+        "Если WebApp пишет \"откройте через Telegram\", просто закройте и откройте WebApp заново — это обновляет сессию."
     )
     await message.answer(text, parse_mode=ParseMode.HTML)

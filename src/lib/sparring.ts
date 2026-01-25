@@ -2,6 +2,12 @@ import { supabase } from './supabase'
 import type { SparringProfile, SparringProfileForm, GeocodingResult } from '../types'
 import { lbsToKg } from '../types'
 
+const isMissingTableError = (message?: string) => {
+  if (!message) return false
+  const normalized = message.toLowerCase()
+  return normalized.includes('schema cache') || normalized.includes('sparring_profiles')
+}
+
 // === Получение всех активных профилей для карты ===
 export async function getAllSparringProfiles(): Promise<SparringProfile[]> {
   if (!supabase) {
@@ -70,7 +76,7 @@ export async function upsertSparringProfile(
   telegramUserId: string,
   telegramUsername: string,
   form: SparringProfileForm
-): Promise<{ success: boolean; profile?: SparringProfile; error?: string }> {
+): Promise<{ success: boolean; profile?: SparringProfile; error?: string; errorCode?: string }> {
   if (!supabase) {
     return { success: false, error: 'Supabase not configured' }
   }
@@ -119,6 +125,13 @@ export async function upsertSparringProfile(
 
   if (error) {
     console.error('Error upserting sparring profile:', error)
+    if (isMissingTableError(error.message)) {
+      return {
+        success: false,
+        errorCode: 'TABLE_MISSING',
+        error: 'Таблица sparring_profiles не найдена. Нужно применить миграцию в Supabase.'
+      }
+    }
     return { success: false, error: error.message }
   }
 

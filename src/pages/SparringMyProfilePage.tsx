@@ -8,7 +8,8 @@ import {
   requestGeolocation,
   reverseGeocode
 } from '../lib/sparring'
-import { getTelegramUser } from '../lib/telegram'
+import { getTelegramUser, initTelegram } from '../lib/telegram'
+import type { TelegramUser } from '../lib/telegram'
 import type {
   SparringProfileForm,
   Hand,
@@ -38,8 +39,10 @@ const initialForm: SparringProfileForm = {
 
 export function SparringMyProfilePage() {
   const navigate = useNavigate()
-  const telegramUser = getTelegramUser()
-  
+  const [telegramUser, setTelegramUser] = useState<TelegramUser | null>(null)
+  const [telegramReady, setTelegramReady] = useState(false)
+  const [telegramAttempts, setTelegramAttempts] = useState(0)
+
   const [form, setForm] = useState<SparringProfileForm>(initialForm)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -49,19 +52,57 @@ export function SparringMyProfilePage() {
   const [locationDisplay, setLocationDisplay] = useState<string>('')
   const [isEditing, setIsEditing] = useState(false)
 
-  // Загрузка существующего профиля
   useEffect(() => {
-    loadProfile()
-  }, [])
+    initTelegram()
+    let cancelled = false
+    let attempts = 0
 
-  async function loadProfile() {
-    if (!telegramUser?.id) {
-      setLoading(false)
-      return
+    const tryLoadUser = () => {
+      if (cancelled) return
+      const user = getTelegramUser()
+      if (user) {
+        setTelegramUser(user)
+        setTelegramReady(true)
+        return
+      }
+      attempts += 1
+      setTelegramAttempts(attempts)
+      if (attempts >= 5) {
+        setTelegramReady(true)
+        return
+      }
+      setTimeout(tryLoadUser, 300)
     }
 
+    tryLoadUser()
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && !telegramUser) {
+        attempts = 0
+        setTelegramReady(false)
+        tryLoadUser()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      cancelled = true
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [telegramUser])
+
+  useEffect(() => {
+    if (telegramUser?.id) {
+      loadProfile(telegramUser.id)
+    } else if (telegramReady) {
+      setLoading(false)
+    }
+  }, [telegramUser, telegramReady])
+
+  async function loadProfile(userId: number) {
     try {
-      const profile = await getMyProfile(String(telegramUser.id))
+      const profile = await getMyProfile(String(userId))
       if (profile) {
         setIsEditing(true)
         setForm({
@@ -81,7 +122,7 @@ export function SparringMyProfilePage() {
           photo_source: profile.photo_source,
           photo_url: profile.photo_url || ''
         })
-        
+
         if (profile.city || profile.district) {
           setLocationDisplay(`${profile.city || ''}${profile.district ? ', ' + profile.district : ''}`)
         } else {
@@ -89,8 +130,7 @@ export function SparringMyProfilePage() {
         }
         setGeoStatus('success')
       } else {
-        // Предзаполняем имя из Telegram
-        if (telegramUser.first_name) {
+        if (telegramUser?.first_name) {
           setForm(prev => ({ ...prev, first_name: telegramUser.first_name || '' }))
         }
       }
@@ -179,6 +219,12 @@ export function SparringMyProfilePage() {
       if (result.success) {
         navigate('/sparring')
       } else {
+        if (result.errorCode === 'TABLE_MISSING') {
+          setError(
+            'В Supabase нет таблицы sparring_profiles. Примените миграцию: supabase/migrations/20260125_sparring_profiles.sql'
+          )
+          return
+        }
         setError(result.error || 'Ошибка сохранения')
       }
     } catch (err: any) {
@@ -200,6 +246,15 @@ export function SparringMyProfilePage() {
     }
   }
 
+  if (!telegramReady) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-[color:var(--accent)] border-t-transparent" />
+        <p className="text-xs text-faint">Подключаем Telegram… ({telegramAttempts}/5)</p>
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -218,11 +273,20 @@ export function SparringMyProfilePage() {
         <p className="mt-2 text-sm text-muted">
           Эта страница доступна только из Telegram бота
         </p>
+        <p className="mt-2 text-xs text-faint">
+          Если открывали из Telegram — просто закройте WebApp и откройте снова.
+        </p>
         <button
           onClick={() => navigate('/sparring')}
           className="btn-secondary mt-6"
         >
           Назад к карте
+        </button>
+        <button
+          onClick={() => window.location.reload()}
+          className="btn-primary mt-3"
+        >
+          Обновить WebApp
         </button>
       </div>
     )
