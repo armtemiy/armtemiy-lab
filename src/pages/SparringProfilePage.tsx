@@ -89,13 +89,13 @@ export function SparringProfilePage() {
         <div className="card overflow-hidden">
           {/* Hero */}
           <div 
-            className="relative -mx-5 -mt-5 h-28 bg-gradient-to-br"
+            className="relative -mx-5 -mt-5 h-32 bg-gradient-to-br"
             style={{ 
-              background: `linear-gradient(135deg, ${styleColor}40, ${styleColor}10)` 
+              background: `linear-gradient(135deg, ${styleColor}50, ${styleColor}15)` 
             }}
           >
-            <div className="absolute -bottom-9 left-5">
-              <div className="h-20 w-20 overflow-hidden rounded-full border-4 border-[color:var(--surface)] bg-[color:var(--surface-elevated)]">
+            <div className="absolute -bottom-10 left-5">
+              <div className="h-24 w-24 overflow-hidden rounded-full border-4 border-[color:var(--surface)] bg-[color:var(--surface-elevated)] shadow-lg">
                 {profile.photo_url ? (
                   <img 
                     src={profile.photo_url} 
@@ -103,7 +103,7 @@ export function SparringProfilePage() {
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center text-2xl font-bold text-muted">
+                  <div className="flex h-full w-full items-center justify-center text-3xl font-bold text-[color:var(--text-primary)]">
                     {profile.first_name[0]}
                     {profile.last_name?.[0] || ''}
                   </div>
@@ -113,17 +113,17 @@ export function SparringProfilePage() {
           </div>
 
           {/* Info */}
-          <div className="mt-12">
+          <div className="mt-14">
             {/* Name & Username */}
             <div className="flex items-start justify-between">
               <div>
-                <h1 className="text-xl font-semibold text-[color:var(--text-primary)]">
+                <h1 className="text-2xl font-bold text-[color:var(--text-primary)]">
                   {profile.first_name} {profile.last_name}
                 </h1>
-                <p className="text-sm text-muted">@{profile.telegram_username}</p>
+                <p className="mt-0.5 text-sm text-[color:var(--text-secondary)]">@{profile.telegram_username}</p>
               </div>
               <span 
-                className="rounded-full px-3 py-1 text-xs font-medium text-white"
+                className="rounded-full px-3 py-1.5 text-xs font-semibold text-white shadow-sm"
                 style={{ background: styleColor }}
               >
                 {styleInfo.name}
@@ -132,9 +132,9 @@ export function SparringProfilePage() {
 
             {/* Location */}
             {(profile.city || profile.district) && (
-              <div className="mt-3 flex items-center gap-2 text-sm text-muted">
+              <div className="mt-3 flex items-center gap-2 text-sm text-[color:var(--text-secondary)]">
                 <span>📍</span>
-                <span>
+                <span className="font-medium">
                   {profile.city}
                   {profile.district && `, ${profile.district}`}
                 </span>
@@ -143,50 +143,50 @@ export function SparringProfilePage() {
 
             {/* Stats Grid */}
             <div className="mt-6 grid grid-cols-3 gap-3">
-              <div className="rounded-lg bg-[color:var(--surface-elevated)] p-3 text-center">
-                <p className="text-lg font-semibold text-[color:var(--text-primary)]">
+              <div className="rounded-xl bg-[color:var(--surface-elevated)] p-4 text-center shadow-sm">
+                <p className="text-2xl font-bold text-[color:var(--text-primary)]">
                   {profile.weight_kg ? `${profile.weight_kg}` : '—'}
                 </p>
-                <p className="text-xs text-muted">кг</p>
+                <p className="mt-1 text-xs font-medium text-[color:var(--text-secondary)]">кг</p>
               </div>
-              <div className="rounded-lg bg-[color:var(--surface-elevated)] p-3 text-center">
-                <p className="text-lg font-semibold text-[color:var(--text-primary)]">
+              <div className="rounded-xl bg-[color:var(--surface-elevated)] p-4 text-center shadow-sm">
+                <p className="text-2xl font-bold text-[color:var(--text-primary)]">
                   {handLabels[profile.hand]}
                 </p>
-                <p className="text-xs text-muted">рука</p>
+                <p className="mt-1 text-xs font-medium text-[color:var(--text-secondary)]">рука</p>
               </div>
-              <div className="rounded-lg bg-[color:var(--surface-elevated)] p-3 text-center">
-                <p className="text-lg font-semibold text-[color:var(--text-primary)]">
+              <div className="rounded-xl bg-[color:var(--surface-elevated)] p-4 text-center shadow-sm">
+                <p className="text-2xl font-bold text-[color:var(--text-primary)]">
                   {formatExperience(profile.experience_years)}
                 </p>
-                <p className="text-xs text-muted">стаж</p>
+                <p className="mt-1 text-xs font-medium text-[color:var(--text-secondary)]">стаж</p>
               </div>
             </div>
 
             {/* Weight in both units */}
             {profile.weight_kg && (
-              <p className="mt-2 text-center text-xs text-faint">
+              <p className="mt-3 text-center text-xs text-[color:var(--text-secondary)]">
                 {formatWeight(profile.weight_kg)}
               </p>
             )}
 
             {/* Style Description */}
             <div className="mt-6">
-              <h3 className="text-sm font-medium text-muted">Стиль борьбы</h3>
+              <h3 className="text-sm font-semibold text-[color:var(--text-secondary)]">Стиль борьбы</h3>
               <div 
-                className="mt-2 rounded-lg border p-3"
-                style={{ borderColor: `${styleColor}40` }}
+                className="mt-3 rounded-xl border-2 p-4"
+                style={{ borderColor: `${styleColor}50` }}
               >
                 <div className="flex items-center gap-2">
                   <span 
                     className="h-3 w-3 rounded-full" 
                     style={{ background: styleColor }}
                   />
-                  <span className="font-medium text-[color:var(--text-primary)]">
+                  <span className="text-base font-semibold text-[color:var(--text-primary)]">
                     {styleInfo.name}
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-muted">
+                <p className="mt-2 text-sm leading-relaxed text-[color:var(--text-secondary)]">
                   {styleInfo.description}
                 </p>
               </div>
@@ -195,8 +195,8 @@ export function SparringProfilePage() {
             {/* Bio */}
             {profile.bio && (
               <div className="mt-6">
-                <h3 className="text-sm font-medium text-muted">О себе</h3>
-                <p className="mt-2 whitespace-pre-wrap text-sm text-[color:var(--text-secondary)]">
+                <h3 className="text-sm font-semibold text-[color:var(--text-secondary)]">О себе</h3>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[color:var(--text-primary)]">
                   {profile.bio}
                 </p>
               </div>
@@ -205,13 +205,13 @@ export function SparringProfilePage() {
             {/* Contact Button */}
             <button
               onClick={handleContactTelegram}
-              className="btn-primary mt-6 w-full"
+              className="btn-primary mt-8 w-full text-base font-semibold shadow-md"
             >
               ✉️ Написать в Telegram
             </button>
 
             {/* Member since */}
-            <p className="mt-4 text-center text-xs text-faint">
+            <p className="mt-4 text-center text-xs text-[color:var(--text-secondary)]">
               На карте с {new Date(profile.created_at).toLocaleDateString('ru-RU', {
                 day: 'numeric',
                 month: 'long',
