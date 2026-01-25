@@ -95,15 +95,23 @@ export function SparringMap({
       zoom,
       zoomControl: true,
       attributionControl: true,
-      preferCanvas: true
+      preferCanvas: true,
+      dragging: true,
+      touchZoom: true,
+      scrollWheelZoom: true,
+      tap: false
     })
 
-    // Тёмный стиль карты (CartoDB Dark Matter)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
-      maxZoom: 19,
-      updateWhenIdle: true
-    }).addTo(map)
+    // MapTiler Streets (ключ пользователя)
+    L.tileLayer(
+      'https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=H995kDm5TDRgcdeT0Lzs',
+      {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a>',
+        maxZoom: 20,
+        updateWhenIdle: true
+      }
+    ).addTo(map)
 
     mapInstanceRef.current = map
 

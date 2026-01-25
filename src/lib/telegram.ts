@@ -15,25 +15,15 @@ export const initTelegram = () => {
     sdk?.expand?.()
     sdk?.setHeaderColor?.('#0a0d12')
     sdk?.setBackgroundColor?.('#0a0d12')
+    sdk?.disableSwipe?.()
     return sdk
   } catch {
     return null
   }
 }
 
-const parseUserFromInitData = (): TelegramUser | null => {
+const parseUserFromInitDataString = (initData: string | null): TelegramUser | null => {
   try {
-    const searchParams = new URLSearchParams(window.location.search)
-    let initData = searchParams.get('tgWebAppData')
-
-    if (!initData && window.location.hash) {
-      const hash = window.location.hash
-      const queryIndex = hash.indexOf('?')
-      const hashQuery = queryIndex >= 0 ? hash.slice(queryIndex + 1) : hash.slice(1)
-      const hashParams = new URLSearchParams(hashQuery)
-      initData = hashParams.get('tgWebAppData')
-    }
-
     if (!initData) return null
 
     const initDataParams = new URLSearchParams(initData)
@@ -50,6 +40,32 @@ const parseUserFromInitData = (): TelegramUser | null => {
       last_name: parsedUser.last_name,
       photo_url: parsedUser.photo_url,
     }
+  } catch {
+    return null
+  }
+}
+
+const parseUserFromInitData = (): TelegramUser | null => {
+  const searchParams = new URLSearchParams(window.location.search)
+  let initData = searchParams.get('tgWebAppData')
+
+  if (!initData && window.location.hash) {
+    const hash = window.location.hash
+    const queryIndex = hash.indexOf('?')
+    const hashQuery = queryIndex >= 0 ? hash.slice(queryIndex + 1) : hash.slice(1)
+    const hashParams = new URLSearchParams(hashQuery)
+    initData = hashParams.get('tgWebAppData')
+  }
+
+  if (initData) {
+    const user = parseUserFromInitDataString(initData)
+    if (user) return user
+  }
+
+  try {
+    const webApp = (window as any)?.Telegram?.WebApp
+    const rawInitData = webApp?.initData
+    return parseUserFromInitDataString(rawInitData || null)
   } catch {
     return null
   }
