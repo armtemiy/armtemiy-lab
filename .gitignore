@@ -16,8 +16,9 @@ dist-ssr
 !.env.example
 bot/.env
 bot/.venv/
-bot/__pycache__/
-bot/*.pyc
+**/__pycache__/
+*.pyc
+*.pyo
 supabase/.temp/
 
 # Editor directories and files
