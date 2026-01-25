@@ -98,8 +98,7 @@ export function SparringMap({
       preferCanvas: true,
       dragging: true,
       touchZoom: true,
-      scrollWheelZoom: true,
-      tap: false
+      scrollWheelZoom: true
     })
 
     // MapTiler Streets (ключ пользователя)

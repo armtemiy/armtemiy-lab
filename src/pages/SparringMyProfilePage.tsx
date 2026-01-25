@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -44,10 +44,14 @@ export function SparringMyProfilePage() {
   const [telegramAttempts, setTelegramAttempts] = useState(0)
   const maxTelegramAttempts = 12
 
+  const geoRequestRef = useRef(0)
+
   const [form, setForm] = useState<SparringProfileForm>(initialForm)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [saveMessage, setSaveMessage] = useState('')
   const [geoStatus, setGeoStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [geoError, setGeoError] = useState<string | null>(null)
   const [locationDisplay, setLocationDisplay] = useState<string>('')
@@ -144,6 +148,7 @@ export function SparringMyProfilePage() {
 
   // Запрос геолокации
   async function handleRequestGeo() {
+    const requestId = ++geoRequestRef.current
     setGeoStatus('loading')
     setGeoError(null)
     
@@ -160,9 +165,12 @@ export function SparringMyProfilePage() {
       
       // Получаем название места
       const address = await reverseGeocode(latitude, longitude)
+      if (geoRequestRef.current !== requestId) return
       setLocationDisplay(address || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`)
+      setGeoError(null)
       setGeoStatus('success')
     } catch (err: any) {
+      if (geoRequestRef.current !== requestId) return
       setGeoError(err.message)
       setGeoStatus('error')
     }
@@ -170,6 +178,7 @@ export function SparringMyProfilePage() {
 
   // Поиск по адресу
   async function handleSearchAddress() {
+    const requestId = ++geoRequestRef.current
     const query = `${form.city} ${form.district}`.trim()
     if (!query) {
       setGeoError('Введите город или район')
@@ -188,13 +197,17 @@ export function SparringMyProfilePage() {
           latitude: result.latitude,
           longitude: result.longitude
         }))
+        if (geoRequestRef.current !== requestId) return
         setLocationDisplay(result.display_name)
+        setGeoError(null)
         setGeoStatus('success')
       } else {
+        if (geoRequestRef.current !== requestId) return
         setGeoError('Место не найдено. Попробуйте другой запрос.')
         setGeoStatus('error')
       }
     } catch (err: any) {
+      if (geoRequestRef.current !== requestId) return
       setGeoError(err.message || 'Ошибка поиска')
       setGeoStatus('error')
     }
@@ -209,16 +222,26 @@ export function SparringMyProfilePage() {
 
     setSaving(true)
     setError(null)
+    setSaveSuccess(false)
+
+    const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
+      return await Promise.race([
+        promise,
+        new Promise<T>((_, reject) =>
+          setTimeout(() => reject(new Error('TIMEOUT')), timeoutMs)
+        )
+      ])
+    }
 
     try {
-      const result = await upsertSparringProfile(
-        String(telegramUser.id),
-        telegramUser.username,
-        form
+      const result = await withTimeout(
+        upsertSparringProfile(String(telegramUser.id), telegramUser.username, form),
+        12000
       )
 
       if (result.success) {
-        navigate('/sparring')
+        setSaveMessage(isEditing ? 'Профиль обновлён' : 'Профиль создан')
+        setSaveSuccess(true)
       } else {
         if (result.errorCode === 'TABLE_MISSING') {
           setError(
@@ -229,7 +252,20 @@ export function SparringMyProfilePage() {
         setError(result.error || 'Ошибка сохранения')
       }
     } catch (err: any) {
-      setError(err.message || 'Ошибка сохранения')
+      if (err?.message === 'TIMEOUT') {
+        const fallbackProfile = await withTimeout(
+          getMyProfile(String(telegramUser.id)).catch(() => null),
+          8000
+        )
+        if (fallbackProfile) {
+          setSaveMessage(isEditing ? 'Профиль обновлён' : 'Профиль создан')
+          setSaveSuccess(true)
+          return
+        }
+        setError('Сохранение занимает слишком долго. Проверьте интернет и попробуйте ещё раз.')
+      } else {
+        setError(err?.message || 'Ошибка сохранения')
+      }
     } finally {
       setSaving(false)
     }
@@ -296,6 +332,31 @@ export function SparringMyProfilePage() {
   return (
     <motion.div {...fadeUp} className="min-h-screen px-4 pb-8 pt-4">
       <div className="mx-auto max-w-md">
+        {saveSuccess && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+            <div className="card w-full max-w-sm text-center">
+              <p className="text-2xl">✅</p>
+              <h3 className="mt-2 text-lg font-semibold text-[color:var(--text-primary)]">
+                {saveMessage}
+              </h3>
+              <p className="mt-1 text-sm text-muted">Профиль появился на карте</p>
+              <div className="mt-4 flex flex-col gap-2">
+                <button
+                  className="btn-primary"
+                  onClick={() => navigate('/sparring')}
+                >
+                  Перейти к карте
+                </button>
+                <button
+                  className="btn-secondary"
+                  onClick={() => setSaveSuccess(false)}
+                >
+                  Остаться здесь
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Header */}
         <header className="mb-6">
           <button
@@ -412,7 +473,7 @@ export function SparringMyProfilePage() {
             </button>
 
             {/* Результат / Ошибка */}
-            {geoError && (
+            {geoStatus === 'error' && geoError && (
               <p className="mt-3 text-xs text-[color:var(--error)]">{geoError}</p>
             )}
             {geoStatus === 'success' && locationDisplay && (

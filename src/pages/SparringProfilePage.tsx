@@ -89,12 +89,12 @@ export function SparringProfilePage() {
         <div className="card overflow-hidden">
           {/* Hero */}
           <div 
-            className="relative -mx-4 -mt-4 h-24 bg-gradient-to-br"
+            className="relative -mx-5 -mt-5 h-28 bg-gradient-to-br"
             style={{ 
               background: `linear-gradient(135deg, ${styleColor}40, ${styleColor}10)` 
             }}
           >
-            <div className="absolute -bottom-8 left-4">
+            <div className="absolute -bottom-9 left-5">
               <div className="h-20 w-20 overflow-hidden rounded-full border-4 border-[color:var(--surface)] bg-[color:var(--surface-elevated)]">
                 {profile.photo_url ? (
                   <img 
@@ -113,7 +113,7 @@ export function SparringProfilePage() {
           </div>
 
           {/* Info */}
-          <div className="mt-10">
+          <div className="mt-12">
             {/* Name & Username */}
             <div className="flex items-start justify-between">
               <div>
