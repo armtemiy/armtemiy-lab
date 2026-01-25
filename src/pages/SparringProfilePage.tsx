@@ -87,33 +87,34 @@ export function SparringProfilePage() {
 
         {/* Profile Card */}
         <div className="card overflow-hidden">
-          {/* Hero */}
+          {/* Hero Background */}
           <div 
-            className="relative -mx-5 -mt-5 h-32 bg-gradient-to-br"
+            className="-mx-5 -mt-5 h-32 bg-gradient-to-br"
             style={{ 
               background: `linear-gradient(135deg, ${styleColor}50, ${styleColor}15)` 
             }}
-          >
-            <div className="absolute -bottom-10 left-5">
-              <div className="h-24 w-24 overflow-hidden rounded-full border-4 border-[color:var(--surface)] bg-[color:var(--surface-elevated)] shadow-lg">
-                {profile.photo_url ? (
-                  <img 
-                    src={profile.photo_url} 
-                    alt={profile.first_name} 
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-3xl font-bold text-[color:var(--text-primary)]">
-                    {profile.first_name[0]}
-                    {profile.last_name?.[0] || ''}
-                  </div>
-                )}
-              </div>
+          />
+
+          {/* Avatar Container */}
+          <div className="relative -mt-12 px-0.5 z-10">
+            <div className="h-24 w-24 overflow-hidden rounded-full border-4 border-[color:var(--surface)] bg-[color:var(--surface-elevated)] shadow-lg">
+              {profile.photo_url ? (
+                <img 
+                  src={profile.photo_url} 
+                  alt={profile.first_name} 
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center pb-1 text-3xl font-bold leading-none text-[color:var(--text-primary)]">
+                  {profile.first_name[0]}
+                  {profile.last_name?.[0] || ''}
+                </div>
+              )}
             </div>
           </div>
 
           {/* Info */}
-          <div className="mt-14">
+          <div className="mt-4">
             {/* Name & Username */}
             <div className="flex items-start justify-between">
               <div>
