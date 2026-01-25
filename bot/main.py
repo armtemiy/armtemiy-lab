@@ -17,22 +17,31 @@ logger.add(
 )
 logger.add("logs/bot.log", rotation="10 MB", level="DEBUG")
 
+# Флаг доступности БД
+db_available = False
+
 async def main() -> None:
+    global db_available
+    
     if not BOT_TOKEN:
         logger.error("BOT_TOKEN is missing!")
         return
 
-    # Инициализация БД
+    # Инициализация БД (не критично если не работает)
     try:
-        await init_db()
-        logger.info("Database initialized")
+        result = await init_db()
+        if result:
+            db_available = True
+            logger.info("Database initialized successfully")
+        else:
+            logger.warning("Database initialization returned False, continuing without DB")
     except Exception as e:
-        logger.error(f"Failed to initialize database: {e}")
+        logger.warning(f"Database not available, continuing without DB: {e}")
 
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher()
 
-    # Middleware
+    # Middleware (будет работать даже без БД благодаря обработке ошибок)
     dp.update.middleware(SpamProtectionMiddleware())
 
     # Роутеры
@@ -40,7 +49,7 @@ async def main() -> None:
     dp.include_router(menu.router)
     dp.include_router(admin.router)
 
-    logger.info("Bot started polling...")
+    logger.info(f"Bot started polling... (DB: {'connected' if db_available else 'offline'})")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
