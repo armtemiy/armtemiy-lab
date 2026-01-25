@@ -213,6 +213,15 @@ export function SparringMyProfilePage() {
     }
   }
 
+  // Обновление фото из Telegram
+  function handleUpdatePhoto() {
+    if (telegramUser?.photo_url) {
+      setForm(prev => ({ ...prev, photo_source: 'telegram', photo_url: telegramUser.photo_url || '' }))
+    } else {
+      setError('Не удалось получить фото из Telegram. Возможно, оно скрыто настройками приватности или вы не установили аватар.')
+    }
+  }
+
   // Сохранение профиля
   async function handleSave() {
     if (!telegramUser?.id || !telegramUser?.username) {
@@ -333,22 +342,24 @@ export function SparringMyProfilePage() {
     <motion.div {...fadeUp} className="min-h-screen px-4 pb-8 pt-4">
       <div className="mx-auto max-w-md">
         {saveSuccess && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-            <div className="card w-full max-w-sm text-center">
-              <p className="text-2xl">✅</p>
-              <h3 className="mt-2 text-lg font-semibold text-[color:var(--text-primary)]">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm">
+            <div className="card w-full max-w-sm text-center shadow-2xl">
+              <p className="text-4xl">✅</p>
+              <h3 className="mt-4 text-xl font-bold text-[color:var(--text-primary)]">
                 {saveMessage}
               </h3>
-              <p className="mt-1 text-sm text-muted">Профиль появился на карте</p>
-              <div className="mt-4 flex flex-col gap-2">
+              <p className="mt-2 text-sm text-muted">Ваш профиль теперь виден на карте спарринг-партнёров</p>
+              <div className="mt-6 flex flex-col gap-3">
                 <button
-                  className="btn-primary"
+                  type="button"
+                  className="btn-primary w-full py-3 text-base font-semibold"
                   onClick={() => navigate('/sparring')}
                 >
-                  Перейти к карте
+                  🗺️ Перейти к карте
                 </button>
                 <button
-                  className="btn-secondary"
+                  type="button"
+                  className="btn-secondary w-full"
                   onClick={() => setSaveSuccess(false)}
                 >
                   Остаться здесь
@@ -635,7 +646,7 @@ export function SparringMyProfilePage() {
             <h3 className="mb-4 text-sm font-medium text-muted">Фото</h3>
             <div className="flex gap-3">
               <button
-                onClick={() => setForm(prev => ({ ...prev, photo_source: 'telegram', photo_url: '' }))}
+                onClick={handleUpdatePhoto}
                 className={`flex-1 rounded-lg border p-3 transition-colors ${
                   form.photo_source === 'telegram'
                     ? 'border-[color:var(--accent)] bg-[color:var(--accent)]/10'
@@ -692,9 +703,9 @@ export function SparringMyProfilePage() {
                   {form.photo_url ? 'Изображение загружено' : 'Нет изображения'}
                 </p>
               </div>
-              {form.photo_source === 'telegram' && telegramUser?.photo_url && form.photo_url !== telegramUser.photo_url && (
+              {form.photo_source === 'telegram' && (!form.photo_url || form.photo_url !== telegramUser?.photo_url) && (
                 <button
-                  onClick={() => setForm(prev => ({ ...prev, photo_url: telegramUser.photo_url || '' }))}
+                  onClick={handleUpdatePhoto}
                   className="rounded-lg bg-[color:var(--surface-elevated)] px-3 py-1.5 text-xs font-medium text-[color:var(--accent)] hover:bg-[color:var(--accent)]/10"
                 >
                   Обновить
