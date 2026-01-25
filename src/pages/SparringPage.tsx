@@ -20,22 +20,27 @@ export function SparringPage() {
 
   useEffect(() => {
     const cached = readCache()
+    console.log('[SparringPage] Cached profiles:', cached.length)
     if (cached.length > 0) {
       setProfiles(cached)
       setLoading(false)
     }
+    // Всегда загружаем свежие данные из БД
     loadData(cached.length === 0)
   }, [])
 
   async function loadData(showLoading: boolean) {
     if (showLoading) setLoading(true)
     try {
+      console.log('[SparringPage] Loading profiles from DB...')
       const allProfiles = await getAllSparringProfiles()
+      console.log('[SparringPage] Received profiles:', allProfiles.length)
       setProfiles(allProfiles)
       writeCache(allProfiles)
 
       if (telegramUser?.id) {
         const myProfile = await getMyProfile(String(telegramUser.id))
+        console.log('[SparringPage] My profile exists:', !!myProfile)
         setHasMyProfile(!!myProfile)
       }
     } catch (error) {
@@ -70,6 +75,12 @@ export function SparringPage() {
     navigate(`/sparring/profile/${profile.id}`)
   }
 
+  function handleRefresh() {
+    console.log('[SparringPage] Manual refresh triggered')
+    localStorage.removeItem(cacheKey)
+    loadData(true)
+  }
+
   return (
     <motion.div {...fadeUp} className="flex h-screen flex-col">
       {/* Header */}
@@ -86,6 +97,13 @@ export function SparringPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={handleRefresh}
+            disabled={loading}
+            className="rounded-lg bg-[color:var(--surface-elevated)] px-3 py-1 text-xs text-[color:var(--text-primary)] hover:bg-[color:var(--accent)]/10 disabled:opacity-50"
+          >
+            🔄
+          </button>
           <span className="rounded-full bg-[color:var(--accent)]/20 px-3 py-1 text-xs text-[color:var(--accent)]">
             {profiles.length} на карте
           </span>

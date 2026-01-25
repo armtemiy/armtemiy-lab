@@ -26,6 +26,11 @@ export async function getAllSparringProfiles(): Promise<SparringProfile[]> {
     return []
   }
 
+  console.log('[Sparring] Loaded profiles from DB:', data?.length || 0)
+  if (data && data.length > 0) {
+    console.log('[Sparring] Sample profile:', data[0])
+  }
+
   return data as SparringProfile[]
 }
 
@@ -117,6 +122,8 @@ export async function upsertSparringProfile(
     is_active: true,
   }
 
+  console.log('[Sparring] Upserting profile for user:', telegramUserId)
+
   const { data, error } = await supabase
     .from('sparring_profiles')
     .upsert(profileData, { onConflict: 'telegram_user_id' })
@@ -135,6 +142,7 @@ export async function upsertSparringProfile(
     return { success: false, error: error.message }
   }
 
+  console.log('[Sparring] Profile saved successfully:', data?.id)
   return { success: true, profile: data as SparringProfile }
 }
 
