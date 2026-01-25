@@ -260,6 +260,8 @@ function App() {
         <Route path="/sparring" element={<SparringPage />} />
         <Route path="/sparring/my-profile" element={<SparringMyProfilePage />} />
         <Route path="/sparring/profile/:id" element={<SparringProfilePage />} />
+        {/* Ловушка для любых других путей - возвращаем на главную */}
+        <Route path="*" element={<HomePage />} />
       </Routes>
     </AnimatePresence>
   )
