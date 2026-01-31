@@ -82,6 +82,8 @@ export async function submitBugReport(payload: BugReportPayload): Promise<BugRep
   const client = getClient()
   if (!client) return { error: 'Supabase не настроен.' }
 
+  const attachments = payload.attachments && payload.attachments.length > 0 ? payload.attachments : null
+
   const { data, error } = await client
     .from(BUG_REPORT_TABLE)
     .insert({
@@ -94,7 +96,7 @@ export async function submitBugReport(payload: BugReportPayload): Promise<BugRep
       platform: sanitize(payload.platform),
       user_agent: sanitize(payload.userAgent),
       screen: sanitize(payload.screen),
-      attachments: payload.attachments ?? []
+      attachments,
     })
     .select('id')
     .single()
