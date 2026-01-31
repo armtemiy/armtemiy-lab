@@ -82,32 +82,41 @@ export async function submitBugReport(payload: BugReportPayload): Promise<BugRep
     return { error: 'Supabase не настроен.' }
   }
 
-  const response = await fetch(`${config.supabaseUrl}/functions/v1/${BUG_REPORT_FUNCTION}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      apikey: config.supabaseAnonKey,
-      Authorization: `Bearer ${config.supabaseAnonKey}`
-    },
-    body: JSON.stringify({
-      summary: sanitize(payload.summary),
-      steps: sanitize(payload.steps),
-      userId: payload.userId ?? null,
-      username: sanitize(payload.username),
-      route: sanitize(payload.route),
-      view: sanitize(payload.view),
-      platform: sanitize(payload.platform),
-      userAgent: sanitize(payload.userAgent),
-      screen: sanitize(payload.screen),
-      attachments: payload.attachments ?? []
+  try {
+    const response = await fetch(`${config.supabaseUrl}/functions/v1/${BUG_REPORT_FUNCTION}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: config.supabaseAnonKey,
+        Authorization: `Bearer ${config.supabaseAnonKey}`
+      },
+      body: JSON.stringify({
+        summary: sanitize(payload.summary),
+        steps: sanitize(payload.steps),
+        userId: payload.userId ?? null,
+        username: sanitize(payload.username),
+        route: sanitize(payload.route),
+        view: sanitize(payload.view),
+        platform: sanitize(payload.platform),
+        userAgent: sanitize(payload.userAgent),
+        screen: sanitize(payload.screen),
+        attachments: payload.attachments ?? []
+      })
     })
-  })
 
-  const json = await response.json().catch(() => null)
-  if (!response.ok) {
-    const message = json?.error ? String(json.error) : 'Не удалось отправить. Попробуйте позже.'
-    return { error: mapInsertError(message) }
+    const text = await response.text()
+    const json = text ? JSON.parse(text) : null
+
+    if (!response.ok) {
+      const message = json?.error
+        ? String(json.error)
+        : `Ошибка функции (${response.status}). Убедитесь, что bug-report-notify задеплоен.`
+      return { error: mapInsertError(message) }
+    }
+
+    return json?.id ? { id: String(json.id) } : { error: 'Не удалось получить ID отчета.' }
+  } catch (err) {
+    console.error('Bug report request failed:', err)
+    return { error: 'Сеть недоступна или функция не отвечает.' }
   }
-
-  return json?.id ? { id: String(json.id) } : { error: 'Не удалось получить ID отчета.' }
 }
