@@ -1,12 +1,19 @@
 import asyncio
+from html import escape as html_escape
+
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.types import Message
 from aiogram.enums import ParseMode
+from loguru import logger
 
 from bot.services.user_service import get_user_snapshot
 
 router = Router()
+
+def _safe(value: str | None, fallback: str = '—') -> str:
+    return html_escape(value) if value else fallback
+
 
 @router.message(Command("profile"))
 @router.message(F.text == "👤 Профиль")
@@ -20,15 +27,14 @@ async def cmd_profile(message: Message) -> None:
         user = None
 
     if not user:
-        # Если не удалось получить пользователя из БД, пробуем еще раз без тайм-аута или просто логируем
+        # Повторяем запрос без тайм-аута, логируем ошибку, но не раскрываем детали пользователю
         try:
-             # Попытка без жесткого тайм-аута или повтор
-             user = await get_user_snapshot(user_id)
-        except Exception as e:
-             pass
+            user = await get_user_snapshot(user_id)
+        except Exception as exc:
+            logger.warning("profile snapshot retry failed: {}", type(exc).__name__)
 
     if not user:
-        first_name = message.from_user.first_name or '—'
+        first_name = _safe(message.from_user.first_name)
         text = (
             f"👤 <b>Профиль</b>\n\n"
             f"🆔 ID: <code>{user_id}</code>\n"
@@ -41,12 +47,12 @@ async def cmd_profile(message: Message) -> None:
     text = (
         f"👤 <b>Профиль</b>\n\n"
         f"🆔 ID: <code>{user.telegram_id}</code>\n"
-        f"👋 Имя: {user.first_name or '—'}\n"
+        f"👋 Имя: {_safe(user.first_name)}\n"
         f"📅 Регистрация: {user.created_at.strftime('%d.%m.%Y')}\n"
     )
 
     if user.sparring_stats:
-        text += f"\n💪 <b>Спарринг-профиль:</b>\n{user.sparring_stats}"
+        text += f"\n💪 <b>Спарринг-профиль:</b>\n{_safe(user.sparring_stats)}"
     else:
         text += "\n💪 <b>Спарринг-профиль:</b> Не создан"
     

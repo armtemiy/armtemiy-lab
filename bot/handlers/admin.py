@@ -1,9 +1,13 @@
 import asyncio
+from dataclasses import dataclass
+from enum import Enum
+
 from aiogram import Router, F, Bot
 from aiogram.types import Message, CallbackQuery
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
+from loguru import logger
 from sqlalchemy import select, func
 
 from bot.config import ADMIN_IDS
@@ -14,92 +18,164 @@ from bot.states import AdminStates
 
 router = Router()
 
-@router.message(Command("check_id"))
+
+class AdminCommand(str, Enum):
+    ADMIN = "admin"
+    CHECK_ID = "check_id"
+    CANCEL = "cancel"
+
+
+class AdminCallback(str, Enum):
+    STATS = "admin_stats"
+    BROADCAST = "admin_broadcast"
+
+
+ADMIN_BUTTON_TEXT = "⚙️ Админка"
+NO_ACCESS_TEXT = "⛔ Нет доступа"
+CANCEL_COMMAND = f"/{AdminCommand.CANCEL.value}"
+BROADCAST_PROMPT = f"📢 Введите текст для рассылки (или {CANCEL_COMMAND} для отмены):"
+BROADCAST_CANCELLED = "❌ Рассылка отменена."
+BROADCAST_START = "⏳ Начинаю рассылку..."
+BROADCAST_DONE = "✅ Рассылка завершена. Отправлено: {count}"
+BROADCAST_BATCH_SIZE = 20
+BROADCAST_PAUSE_SECONDS = 1
+
+
+@dataclass(frozen=True)
+class AdminStats:
+    total_users: int
+    total_profiles: int
+    active_profiles: int
+
+
+def is_admin(user_id: int | None) -> bool:
+    return user_id is not None and user_id in ADMIN_IDS
+
+
+async def fetch_stats() -> AdminStats:
+    async with AsyncSessionLocal() as session:
+        users_result = await session.execute(select(func.count(User.id)))
+        profiles_result = await session.execute(select(func.count(SparringProfile.id)))
+        active_result = await session.execute(
+            select(func.count(SparringProfile.id)).where(SparringProfile.is_active.is_(True))
+        )
+
+    return AdminStats(
+        total_users=users_result.scalar() or 0,
+        total_profiles=profiles_result.scalar() or 0,
+        active_profiles=active_result.scalar() or 0
+    )
+
+
+def render_stats(stats: AdminStats) -> str:
+    return (
+        "⚙️ <b>Админ-панель</b>\n\n"
+        f"👥 Всего в боте: <b>{stats.total_users}</b>\n"
+        f"🥊 Спарринг-профилей: <b>{stats.total_profiles}</b> (Активных: {stats.active_profiles})"
+    )
+
+
+@router.message(Command(AdminCommand.CHECK_ID.value))
 async def cmd_check_id(message: Message) -> None:
-    user_id = message.from_user.id
-    is_admin = user_id in ADMIN_IDS
+    user_id = message.from_user.id if message.from_user else None
+    if user_id is None:
+        return
+
     await message.answer(
         f"🆔 Ваш ID: <code>{user_id}</code>\n"
-        f"👮 Админ: {'✅ Да' if is_admin else '❌ Нет'}",
+        f"👮 Админ: {'✅ Да' if is_admin(user_id) else '❌ Нет'}",
         parse_mode=ParseMode.HTML
     )
 
-@router.message(Command("admin"))
-@router.message(F.text == "⚙️ Админка")
+
+@router.message(Command(AdminCommand.ADMIN.value))
+@router.message(F.text == ADMIN_BUTTON_TEXT)
 async def cmd_admin_panel(message: Message) -> None:
-    if message.from_user.id not in ADMIN_IDS:
+    user_id = message.from_user.id if message.from_user else None
+    if not is_admin(user_id):
         return
 
-    text = await get_stats_text()
-    await message.answer(text, parse_mode=ParseMode.HTML, reply_markup=get_admin_keyboard())
+    stats = await fetch_stats()
+    await message.answer(
+        render_stats(stats),
+        parse_mode=ParseMode.HTML,
+        reply_markup=get_admin_keyboard()
+    )
 
-@router.callback_query(F.data == "admin_stats")
+
+@router.callback_query(F.data == AdminCallback.STATS.value)
 async def cb_admin_stats(callback: CallbackQuery) -> None:
-    if callback.from_user.id not in ADMIN_IDS:
-        await callback.answer("⛔ Нет доступа", show_alert=True)
+    if not is_admin(callback.from_user.id if callback.from_user else None):
+        await callback.answer(NO_ACCESS_TEXT, show_alert=True)
         return
 
-    text = await get_stats_text()
-    # Пытаемся отредактировать сообщение (если текст изменился)
+    if not callback.message or not isinstance(callback.message, Message):
+        await callback.answer("Сообщение не найдено", show_alert=True)
+        return
+
+    stats = await fetch_stats()
     try:
-        await callback.message.edit_text(text, parse_mode=ParseMode.HTML, reply_markup=get_admin_keyboard())
+        await callback.message.edit_text(
+            render_stats(stats),
+            parse_mode=ParseMode.HTML,
+            reply_markup=get_admin_keyboard()
+        )
         await callback.answer("✅ Статистика обновлена")
-    except Exception:
+    except Exception as exc:
+        logger.warning("admin stats edit failed: {}", type(exc).__name__)
         await callback.answer("✅ Данные актуальны")
 
-@router.callback_query(F.data == "admin_broadcast")
+
+@router.callback_query(F.data == AdminCallback.BROADCAST.value)
 async def cb_admin_broadcast(callback: CallbackQuery, state: FSMContext) -> None:
-    if callback.from_user.id not in ADMIN_IDS:
-        await callback.answer("⛔ Нет доступа", show_alert=True)
+    if not is_admin(callback.from_user.id if callback.from_user else None):
+        await callback.answer(NO_ACCESS_TEXT, show_alert=True)
         return
 
-    await callback.message.answer("📢 Введите текст для рассылки (или /cancel для отмены):")
+    if not callback.message or not isinstance(callback.message, Message):
+        await callback.answer("Сообщение не найдено", show_alert=True)
+        return
+
+    await callback.message.answer(BROADCAST_PROMPT)
     await state.set_state(AdminStates.waiting_for_broadcast_text)
     await callback.answer()
 
+
 @router.message(AdminStates.waiting_for_broadcast_text)
 async def process_broadcast(message: Message, state: FSMContext, bot: Bot) -> None:
-    if message.text == "/cancel":
-        await message.answer("❌ Рассылка отменена.")
+    text = message.text or ""
+    if text.strip() == CANCEL_COMMAND:
+        await message.answer(BROADCAST_CANCELLED)
         await state.clear()
         return
 
-    text_to_send = message.text
-    count = 0
-    
-    status_msg = await message.answer("⏳ Начинаю рассылку...")
+    if not text.strip():
+        await message.answer("Сообщение пустое. Введите текст или /cancel.")
+        return
 
-    async with AsyncSessionLocal() as session:
-        # Получаем всех пользователей (лучше батчами, но пока просто всех ID)
-        result = await session.execute(select(User.telegram_id))
-        user_ids = result.scalars().all()
+    status_msg = await message.answer(BROADCAST_START)
+    user_ids = await _fetch_user_ids()
 
-    for uid in user_ids:
+    sent_count = 0
+    failed_count = 0
+    for index, user_id in enumerate(user_ids, start=1):
         try:
-            await bot.send_message(uid, text_to_send)
-            count += 1
-            # Небольшая задержка чтобы не словить FloodWait
-            if count % 20 == 0:
-                await asyncio.sleep(1)
-        except Exception:
-            pass # Игнорируем заблокировавших бота
+            await bot.send_message(user_id, text)
+            sent_count += 1
+            if index % BROADCAST_BATCH_SIZE == 0:
+                await asyncio.sleep(BROADCAST_PAUSE_SECONDS)
+        except Exception as exc:
+            failed_count += 1
+            logger.warning("broadcast send failed: {}", type(exc).__name__)
 
-    await status_msg.edit_text(f"✅ Рассылка завершена. Отправлено: {count}")
+    summary = BROADCAST_DONE.format(count=sent_count)
+    if failed_count:
+        summary += f" (ошибок: {failed_count})"
+    await status_msg.edit_text(summary)
     await state.clear()
 
-async def get_stats_text() -> str:
-    async with AsyncSessionLocal() as session:
-        result_users = await session.execute(select(func.count(User.id)))
-        total_users = result_users.scalar() or 0
-        
-        result_profiles = await session.execute(select(func.count(SparringProfile.id)))
-        total_profiles = result_profiles.scalar() or 0
-        
-        result_active = await session.execute(select(func.count(SparringProfile.id)).where(SparringProfile.is_active == True))
-        active_profiles = result_active.scalar() or 0
 
-    return (
-        "⚙️ <b>Админ-панель</b>\n\n"
-        f"👥 Всего в боте: <b>{total_users}</b>\n"
-        f"🥊 Спарринг-профилей: <b>{total_profiles}</b> (Активных: {active_profiles})"
-    )
+async def _fetch_user_ids() -> list[int]:
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(User.telegram_id))
+        return list(result.scalars().all())

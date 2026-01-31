@@ -14,6 +14,7 @@ const AdminModule = lazy(() => import('./modules/AdminModule').then((m) => ({ de
 const AnthroModule = lazy(() => import('./modules/AnthroModule').then((m) => ({ default: m.AnthroModule })))
 const CounterModule = lazy(() => import('./modules/CounterModule').then((m) => ({ default: m.CounterModule })))
 const DiagnosticWizard = lazy(() => import('./modules/DiagnosticWizard').then((m) => ({ default: m.DiagnosticWizard })))
+const PeriodizationCalculator = lazy(() => import('./modules/PeriodizationCalculator').then((m) => ({ default: m.PeriodizationCalculator })))
 const SparringPage = lazy(() => import('./pages/SparringPage').then((m) => ({ default: m.SparringPage })))
 const SparringMyProfilePage = lazy(() => import('./pages/SparringMyProfilePage').then((m) => ({ default: m.SparringMyProfilePage })))
 const SparringProfilePage = lazy(() => import('./pages/SparringProfilePage').then((m) => ({ default: m.SparringProfilePage })))
@@ -24,7 +25,7 @@ const LoadingCard = () => (
   </div>
 )
 
-type View = 'home' | 'wizard' | 'anthro' | 'counter' | 'admin'
+type View = 'home' | 'wizard' | 'anthro' | 'counter' | 'admin' | 'periodization'
 
 const treeStorageKey = 'armtemiy_lab_tree_override'
 
@@ -85,7 +86,7 @@ function HomePage() {
     }
   }, [])
 
-  const isAdmin = telegramUser?.id ? config.adminIds.includes(telegramUser.id) : false
+  const isAdmin = telegramUser?.id ? config.adminIds.includes(String(telegramUser.id)) : false
   const canAccessPremium = isAdmin || premiumUnlocked
 
   return (
@@ -138,54 +139,70 @@ function HomePage() {
                 <p className="text-sm text-muted">Модули</p>
                 <div className="mt-4 grid gap-3">
                   <ModuleCard
-                    title="Диагностика поражения"
-                    description="Пошаговый разбор на 60 секунд."
-                    actionLabel="Запустить"
-                    onAction={() => setView('wizard')}
-                  />
-                  <ModuleCard
-                    title="Антропометрия"
-                    description="Подбор базового стиля по рычагам."
+                    title="Калькулятор периодизации"
+                    description="План на 4 недели для силы на базовом упражнении."
                     actionLabel="Открыть"
-                    onAction={() => setView('anthro')}
-                  />
-                  <ModuleCard
-                    title="Контр-матрица"
-                    description="Быстрый подбор контр-приема."
-                    actionLabel="Открыть"
-                    onAction={() => setView('counter')}
-                  />
-                  
-                  {/* НОВЫЙ МОДУЛЬ: Поиск спарринг-партнёров */}
-                  <ModuleCard
-                    title="Найти спарринг-партнёра"
-                    description="Карта армрестлеров рядом с тобой."
-                    actionLabel="Открыть"
-                    onAction={() => navigate('/sparring')}
+                    onAction={() => setView('periodization')}
                   />
 
                   {isAdmin && (
-                    <ModuleCard
-                      title="Админ: Логика"
-                      description="Загрузка и экспорт дерева решений."
-                      actionLabel="Открыть"
-                      onAction={() => setView('admin')}
-                    />
+                    <>
+                      <ModuleCard
+                        title="Диагностика поражения"
+                        description="Пошаговый разбор на 60 секунд."
+                        actionLabel="Запустить"
+                        onAction={() => setView('wizard')}
+                      />
+                      <ModuleCard
+                        title="Антропометрия"
+                        description="Подбор базового стиля по рычагам."
+                        actionLabel="Открыть"
+                        onAction={() => setView('anthro')}
+                      />
+                      <ModuleCard
+                        title="Контр-матрица"
+                        description="Быстрый подбор контр-приема."
+                        actionLabel="Открыть"
+                        onAction={() => setView('counter')}
+                      />
+                      <ModuleCard
+                        title="Найти спарринг-партнёра"
+                        description="Карта армрестлеров рядом с тобой."
+                        actionLabel="Открыть"
+                        onAction={() => navigate('/sparring')}
+                      />
+                      <ModuleCard
+                        title="Админ: Логика"
+                        description="Загрузка и экспорт дерева решений."
+                        actionLabel="Открыть"
+                        onAction={() => setView('admin')}
+                      />
+                    </>
                   )}
                 </div>
               </div>
 
-              <div className="card">
-                <p className="text-sm text-muted">Статус логики</p>
-                <p className="mt-2 text-xs text-faint">
-                  Дерево: {treeSource === 'override' ? 'кастомное' : 'по умолчанию'} · Узлов:{' '}
-                  {Object.keys(tree.nodes).length}
-                </p>
-              </div>
+              {isAdmin && (
+                <div className="card">
+                  <p className="text-sm text-muted">Статус логики</p>
+                  <p className="mt-2 text-xs text-faint">
+                    Дерево: {treeSource === 'override' ? 'кастомное' : 'по умолчанию'} · Узлов:{' '}
+                    {Object.keys(tree.nodes).length}
+                  </p>
+                </div>
+              )}
             </motion.div>
           )}
 
-          {view === 'wizard' && (
+          {view === 'periodization' && (
+            <motion.div key="periodization" {...fadeUp}>
+              <Suspense fallback={<LoadingCard />}>
+                <PeriodizationCalculator onExit={() => setView('home')} />
+              </Suspense>
+            </motion.div>
+          )}
+
+          {view === 'wizard' && isAdmin && (
             <motion.div key="wizard" {...fadeUp}>
               <Suspense fallback={<LoadingCard />}>
                 <DiagnosticWizard
@@ -202,7 +219,7 @@ function HomePage() {
             </motion.div>
           )}
 
-          {view === 'anthro' && (
+          {view === 'anthro' && isAdmin && (
             <motion.div key="anthro" {...fadeUp}>
               <Suspense fallback={<LoadingCard />}>
                 <AnthroModule onExit={() => setView('home')} />
@@ -210,7 +227,7 @@ function HomePage() {
             </motion.div>
           )}
 
-          {view === 'counter' && (
+          {view === 'counter' && isAdmin && (
             <motion.div key="counter" {...fadeUp}>
               <Suspense fallback={<LoadingCard />}>
                 <CounterModule onExit={() => setView('home')} />

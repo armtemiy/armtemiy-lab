@@ -1,3 +1,5 @@
+from html import escape as html_escape
+
 from aiogram import Router, Bot, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import CommandStart
@@ -16,6 +18,7 @@ async def cmd_start(message: Message, bot: Bot) -> None:
     user_id = message.from_user.id
     username = message.from_user.username
     first_name = message.from_user.first_name or "друг"
+    safe_first_name = html_escape(first_name)
     
     # Проверка подписки
     is_subscribed = await check_subscription(bot, user_id)
@@ -38,7 +41,7 @@ async def cmd_start(message: Message, bot: Bot) -> None:
     logger.info(f"User {user_id} (@{username}) started bot")
     
     text = (
-        f"👋 Привет, {first_name}!\n\n"
+        f"👋 Привет, {safe_first_name}!\n\n"
         "Я Armtemiy Lab — помощник армрестлера.\n\n"
         "Меню 👇"
     )
@@ -56,6 +59,7 @@ async def callback_check_subscription(callback: CallbackQuery, bot: Bot) -> None
     if is_subscribed:
         await callback.message.delete()
         first_name = callback.from_user.first_name or "друг"
+        safe_first_name = html_escape(first_name)
         
         await get_or_create_user(
             telegram_id=callback.from_user.id,
@@ -64,7 +68,7 @@ async def callback_check_subscription(callback: CallbackQuery, bot: Bot) -> None
         )
         
         text = (
-            f"✅ Спасибо за подписку, <b>{first_name}</b>!\n\n"
+            f"✅ Спасибо за подписку, <b>{safe_first_name}</b>!\n\n"
             "Добро пожаловать в Armtemiy Lab 👇"
         )
         

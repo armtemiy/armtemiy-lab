@@ -2,8 +2,9 @@ import os
 from dataclasses import dataclass
 from datetime import datetime
 from time import time
-from typing import Dict, Optional, Tuple
+from typing import Dict, Tuple
 
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.exc import DBAPIError
 
@@ -11,6 +12,7 @@ from bot.db.database import AsyncSessionLocal
 from bot.db.models import User, SparringProfile
 
 USER_CACHE_TTL = int(os.getenv("USER_CACHE_TTL", "300"))
+STYLE_LABELS = {"outside": "Аутсайд", "inside": "Инсайд", "both": "Универсал"}
 
 
 @dataclass(frozen=True)
@@ -52,6 +54,28 @@ def _make_snapshot(user: User, sparring_info: str | None = None) -> UserSnapshot
     )
 
 
+async def _fetch_user(session, telegram_id: int) -> User | None:
+    result = await session.execute(select(User).where(User.telegram_id == telegram_id))
+    return result.scalar_one_or_none()
+
+
+async def _fetch_sparring_profile(session, telegram_id: int) -> SparringProfile | None:
+    result = await session.execute(
+        select(SparringProfile).where(SparringProfile.telegram_user_id == str(telegram_id))
+    )
+    return result.scalar_one_or_none()
+
+
+def _format_sparring_stats(profile: SparringProfile | None) -> str | None:
+    if not profile or not profile.is_active:
+        return None
+
+    style_name = STYLE_LABELS.get(profile.style, profile.style)
+    weight = f"{profile.weight_kg}кг" if profile.weight_kg is not None else "— кг"
+    experience = f"стаж {profile.experience_years}г" if profile.experience_years is not None else "стаж —"
+    return f"{style_name}, {weight}, {experience}"
+
+
 async def get_user_snapshot(telegram_id: int) -> UserSnapshot | None:
     cached = _get_cached_user(telegram_id)
     if cached:
@@ -59,29 +83,16 @@ async def get_user_snapshot(telegram_id: int) -> UserSnapshot | None:
 
     try:
         async with AsyncSessionLocal() as session:
-            # Получаем пользователя
-            result = await session.execute(select(User).where(User.telegram_id == telegram_id))
-            user = result.scalar_one_or_none()
+            user = await _fetch_user(session, telegram_id)
             if not user:
                 return None
 
-            # Получаем спарринг профиль
-            sparring_result = await session.execute(
-                select(SparringProfile).where(SparringProfile.telegram_user_id == str(telegram_id))
-            )
-            sparring = sparring_result.scalar_one_or_none()
-            
-            sparring_info = None
-            if sparring and sparring.is_active:
-                style_map = {"outside": "Аутсайд", "inside": "Инсайд", "both": "Универсал"}
-                style_name = style_map.get(sparring.style, sparring.style)
-                sparring_info = f"{style_name}, {sparring.weight_kg}кг, стаж {sparring.experience_years}г"
-
-            snapshot = _make_snapshot(user, sparring_info)
+            sparring = await _fetch_sparring_profile(session, telegram_id)
+            snapshot = _make_snapshot(user, _format_sparring_stats(sparring))
             _set_cached_user(snapshot)
             return snapshot
-    except (DBAPIError, OSError, Exception) as e:
-        print(f"user_service snapshot error: {e}")
+    except (DBAPIError, OSError, Exception) as exc:
+        logger.warning("user_service snapshot error: {}", type(exc).__name__)
         return cached
 
 
@@ -114,6 +125,6 @@ async def get_or_create_user(telegram_id: int, username: str | None = None, firs
             await session.refresh(new_user)
             # Не кэшируем тут, чтобы при следующем запросе подтянулся и спарринг профиль (если есть)
             return new_user
-    except (DBAPIError, OSError, Exception) as e:
-        print(f"user_service error: {e}")
+    except (DBAPIError, OSError, Exception) as exc:
+        logger.warning("user_service error: {}", type(exc).__name__)
         return None

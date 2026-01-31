@@ -1,7 +1,10 @@
 import os
 import ssl
+
+from loguru import logger
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.pool import NullPool
+
 from bot.db.models import Base
 
 # Получаем URL БД из переменных окружения
@@ -11,10 +14,8 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL and "?" in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.split("?")[0]
 
-# Настройка SSL для asyncpg
+# Настройка SSL для asyncpg (по умолчанию с валидацией сертификата)
 ssl_context = ssl.create_default_context()
-ssl_context.check_hostname = False
-ssl_context.verify_mode = ssl.CERT_NONE
 
 # Определяем connect_args в зависимости от типа БД
 if DATABASE_URL and "postgresql" in DATABASE_URL:
@@ -49,15 +50,6 @@ async def init_db():
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         return True
-    except Exception as e:
-        print(f"Database init error: {e}")
+    except Exception as exc:
+        logger.warning("Database init error: {}", type(exc).__name__)
         return False
-
-async def get_db_session() -> AsyncSession:
-    """Генератор сессий"""
-    async with AsyncSessionLocal() as session:
-        yield session
-
-def get_session() -> AsyncSession:
-    """Создать новую сессию (не генератор)"""
-    return AsyncSessionLocal()

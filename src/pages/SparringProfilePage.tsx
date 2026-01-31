@@ -39,9 +39,10 @@ export function SparringProfilePage() {
   }
 
   function handleContactTelegram() {
-    if (profile?.telegram_username) {
-      window.open(`https://t.me/${profile.telegram_username}`, '_blank')
-    }
+    if (!profile?.telegram_username) return
+    const safeUsername = profile.telegram_username.replace(/[^a-zA-Z0-9_]/g, '')
+    if (!safeUsername) return
+    window.open(`https://t.me/${safeUsername}`, '_blank')
   }
 
   if (loading) {

@@ -17,7 +17,8 @@ export const initTelegram = () => {
     sdk?.setBackgroundColor?.('#0a0d12')
     sdk?.disableSwipe?.()
     return sdk
-  } catch {
+  } catch (error) {
+    console.warn('Telegram SDK init failed')
     return null
   }
 }
@@ -40,7 +41,8 @@ const parseUserFromInitDataString = (initData: string | null): TelegramUser | nu
       last_name: parsedUser.last_name,
       photo_url: parsedUser.photo_url,
     }
-  } catch {
+  } catch (error) {
+    console.warn('Failed to parse Telegram init data')
     return null
   }
 }
@@ -66,7 +68,8 @@ const parseUserFromInitData = (): TelegramUser | null => {
     const webApp = (window as any)?.Telegram?.WebApp
     const rawInitData = webApp?.initData
     return parseUserFromInitDataString(rawInitData || null)
-  } catch {
+  } catch (error) {
+    console.warn('Failed to read Telegram init data')
     return null
   }
 }
@@ -83,7 +86,8 @@ export const getTelegramUser = (): TelegramUser | null => {
       last_name: user.last_name,
       photo_url: user.photo_url,
     }
-  } catch {
+  } catch (error) {
+    console.warn('Failed to read Telegram WebApp user')
     return parseUserFromInitData()
   }
 }
@@ -96,7 +100,8 @@ export const getTelegramUserPhotoUrl = (): string | null => {
     const webApp = (window as any)?.Telegram?.WebApp
     const user = webApp?.initDataUnsafe?.user
     return user?.photo_url || null
-  } catch {
+  } catch (error) {
+    console.warn('Failed to read Telegram photo url')
     return null
   }
 }
