@@ -7,6 +7,7 @@ import { config } from "./lib/config";
 import { getTelegramUser, initTelegram } from "./lib/telegram";
 import type { TelegramUser } from "./lib/telegram";
 import { ModuleCard } from "./components/ModuleCard";
+import { BugReportModal } from "./components/BugReportModal";
 import type { TreeSource, WebAppStatus } from "./types";
 import { fadeUp } from "./ui";
 
@@ -66,6 +67,7 @@ function HomePage() {
   const [tree, setTree] = useState<DiagnosticTree>(diagnosticTree);
   const [treeSource, setTreeSource] = useState<TreeSource>("default");
   const [view, setView] = useState<View>("home");
+  const [bugModalOpen, setBugModalOpen] = useState(false);
   const [webAppStatus, setWebAppStatus] = useState<WebAppStatus>({
     available: false,
     openInvoice: false,
@@ -129,6 +131,17 @@ function HomePage() {
   return (
     <div className="min-h-screen px-4 pb-16 pt-6">
       <div className="mx-auto flex w-full max-w-md flex-col gap-6">
+        <BugReportModal
+          open={bugModalOpen}
+          onClose={() => setBugModalOpen(false)}
+          context={{
+            userId: telegramUser?.id,
+            username: telegramUser?.username,
+            route: "/",
+            view,
+            platform: webAppStatus.platform,
+          }}
+        />
         <header className="flex items-start justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.4em] text-faint">
@@ -177,6 +190,12 @@ function HomePage() {
                     description="План на 4 недели для набора силы в базовых упражнениях."
                     actionLabel="Открыть"
                     onAction={() => setView("periodization")}
+                  />
+                  <ModuleCard
+                    title="Сообщить об ошибке"
+                    description="Сообщи о баге — мы быстро исправим."
+                    actionLabel="Написать"
+                    onAction={() => setBugModalOpen(true)}
                   />
 
                   {isAdmin && (
