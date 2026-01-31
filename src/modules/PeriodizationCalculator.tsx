@@ -37,30 +37,30 @@ const HISTORY_STORAGE_KEY = 'armtemiy_periodization_history'
 const WEEKS: Array<Omit<PlanWeek, 'weight'>> = [
   {
     week: 'Неделя 1 — Вкатка',
-    intensity: 0.8,
+    intensity: 0.65,
     volume: '5×5',
     note: 'Легкая / вводная',
     rest: 'Отдых 1:30–2:00'
   },
   {
     week: 'Неделя 2 — Нагрузка',
-    intensity: 0.9,
+    intensity: 0.75,
     volume: '4×4',
     note: 'Средняя',
     rest: 'Отдых 2:30–3:00'
   },
   {
     week: 'Неделя 3 — Пик',
-    intensity: 1,
+    intensity: 0.85,
     volume: '3×3',
     note: 'Тяжелая',
     rest: 'Отдых 4:00–5:00'
   },
   {
     week: 'Неделя 4 — Рекорд',
-    intensity: 1.05,
-    volume: '2–3',
-    note: 'Попытка рекорда',
+    intensity: 0.95,
+    volume: '1×2–3',
+    note: 'Контрольный подход',
     rest: 'Отдых 6:00–9:00'
   }
 ]
@@ -87,9 +87,10 @@ export function PeriodizationCalculator({ onExit }: PeriodizationCalculatorProps
 
   const plan = useMemo<PlanWeek[]>(() => {
     const numericWeight = typeof weight === 'number' ? weight : null
+    const trainingMax = numericWeight ? numericWeight * 0.9 : null
     return WEEKS.map((week) => ({
       ...week,
-      weight: numericWeight ? roundWeight(numericWeight * week.intensity) : null
+      weight: trainingMax ? roundWeight(trainingMax * week.intensity) : null
     }))
   }, [weight])
 
@@ -136,10 +137,11 @@ export function PeriodizationCalculator({ onExit }: PeriodizationCalculatorProps
       </div>
 
       <p className="mt-4 text-sm text-muted">
-        Введите рабочий вес на 5 повторений. План рассчитан на 4 недели и сочетает линейную и волновую нагрузку.
+        Введите максимальный вес на 5 повторений в одном подходе (5RM). План рассчитан на 4 недели и
+        использует тренировочный максимум 90% от 5RM.
       </p>
       <p className="mt-2 text-xs text-faint">
-        Формат 5×5 означает 5 подходов по 5 повторений. Аналогично 4×4 и 3×3.
+        Формат 5×5 означает 5 подходов по 5 повторений. Формат 1×2–3 — один контрольный подход на 2–3 повторения.
       </p>
 
       <div className="mt-6 grid gap-4">
@@ -179,6 +181,11 @@ export function PeriodizationCalculator({ onExit }: PeriodizationCalculatorProps
         <p className="mt-2 text-sm text-[color:var(--text-primary)]">
           Упражнение: <span className="font-semibold">{selectedExercise}</span>
         </p>
+        {typeof weight === 'number' && (
+          <p className="mt-1 text-xs text-faint">
+            5RM: {weight} кг · Тренировочный максимум: {roundWeight(weight * 0.9)} кг
+          </p>
+        )}
         <p className="mt-2 text-xs text-faint">
           Рекомендованный отдых зависит от недели и интенсивности.
         </p>
