@@ -34,7 +34,7 @@ export function BugReportModal({ open, onClose, context }: BugReportModalProps) 
     return raw ? Number(raw) : 0
   }, [open])
 
-  const rateLimited = lastSent && Date.now() - lastSent < RATE_LIMIT_MS
+  const rateLimited = lastSent > 0 && Date.now() - lastSent < RATE_LIMIT_MS
 
   if (!open) return null
 
