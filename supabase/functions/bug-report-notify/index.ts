@@ -28,7 +28,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const body = (await req.json()) as Payload
+    const raw = await req.text()
+    const body = raw ? (JSON.parse(raw) as Payload) : ({} as Payload)
 
     if (!body?.summary) {
       return new Response(JSON.stringify({ error: 'Invalid payload' }), {
