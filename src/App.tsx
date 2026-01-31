@@ -122,16 +122,6 @@ function HomePage() {
           </div>
         </header>
 
-        <div className="card">
-          <p className="text-sm text-muted">
-            Ответь на 5–7 вопросов. Алгоритм даст диагноз и точечную рекомендацию.
-          </p>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="pill text-white">60 секунд</span>
-            <span className="pill text-white">Без воды</span>
-          </div>
-        </div>
-
         <AnimatePresence mode="wait">
           {view === 'home' && (
             <motion.div key="home" {...fadeUp} className="flex flex-col gap-4">
