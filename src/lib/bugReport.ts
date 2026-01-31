@@ -1,7 +1,6 @@
 import { supabase } from './supabase'
 import { config } from './config'
 
-const BUG_REPORT_TABLE = 'bug_reports'
 const BUG_REPORT_BUCKET = 'bug-reports'
 const BUG_REPORT_FUNCTION = 'bug-report-notify'
 const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024
