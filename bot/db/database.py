@@ -15,7 +15,8 @@ if DATABASE_URL and "?" in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.split("?")[0]
 
 # Настройка SSL для asyncpg (по умолчанию с валидацией сертификата)
-ssl_context = ssl.create_default_context()
+ca_path = os.getenv("DB_SSL_CA_PATH", "")
+ssl_context = ssl.create_default_context(cafile=ca_path or None)
 
 # Определяем connect_args в зависимости от типа БД
 if DATABASE_URL and "postgresql" in DATABASE_URL:
