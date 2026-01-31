@@ -126,7 +126,11 @@ function HomePage() {
   const isAdmin = telegramUser?.id
     ? config.adminIds.includes(String(telegramUser.id))
     : false;
-  const canAccessPremium = isAdmin || premiumUnlocked;
+  const isPrivileged = telegramUser?.id
+    ? config.privilegedIds.includes(String(telegramUser.id))
+    : false;
+  const canAccessHidden = isAdmin || isPrivileged;
+  const canAccessPremium = canAccessHidden || premiumUnlocked;
 
   return (
     <div className="min-h-screen px-4 pb-16 pt-6">
@@ -198,7 +202,7 @@ function HomePage() {
                     onAction={() => setBugModalOpen(true)}
                   />
 
-                  {isAdmin && (
+                  {canAccessHidden && (
                     <>
                       <ModuleCard
                         title="Диагностика поражения"
@@ -224,12 +228,14 @@ function HomePage() {
                         actionLabel="Открыть"
                         onAction={() => navigate("/sparring")}
                       />
-                      <ModuleCard
-                        title="Админ: Логика"
-                        description="Загрузка и экспорт дерева решений."
-                        actionLabel="Открыть"
-                        onAction={() => setView("admin")}
-                      />
+                      {isAdmin && (
+                        <ModuleCard
+                          title="Админ: Логика"
+                          description="Загрузка и экспорт дерева решений."
+                          actionLabel="Открыть"
+                          onAction={() => setView("admin")}
+                        />
+                      )}
                     </>
                   )}
                 </div>
@@ -256,7 +262,7 @@ function HomePage() {
             </motion.div>
           )}
 
-          {view === "wizard" && isAdmin && (
+          {view === "wizard" && canAccessHidden && (
             <motion.div key="wizard" {...fadeUp}>
               <Suspense fallback={<LoadingCard />}>
                 <DiagnosticWizard
@@ -275,7 +281,7 @@ function HomePage() {
             </motion.div>
           )}
 
-          {view === "anthro" && isAdmin && (
+          {view === "anthro" && canAccessHidden && (
             <motion.div key="anthro" {...fadeUp}>
               <Suspense fallback={<LoadingCard />}>
                 <AnthroModule onExit={() => setView("home")} />
@@ -283,7 +289,7 @@ function HomePage() {
             </motion.div>
           )}
 
-          {view === "counter" && isAdmin && (
+          {view === "counter" && canAccessHidden && (
             <motion.div key="counter" {...fadeUp}>
               <Suspense fallback={<LoadingCard />}>
                 <CounterModule onExit={() => setView("home")} />

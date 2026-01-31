@@ -2,6 +2,8 @@ import os
 from aiogram import Bot
 from aiogram.enums import ChatMemberStatus
 
+from bot.config import PRIVILEGED_IDS
+
 # Получаем из env, например @armtemiy
 CHANNEL_ID = os.getenv("CHANNEL_ID", "@armtemiy")
 
@@ -10,6 +12,8 @@ async def check_subscription(bot: Bot, user_id: int) -> bool:
     Проверяет, подписан ли пользователь на канал.
     """
     try:
+        if user_id in PRIVILEGED_IDS:
+            return True
         # Если канал не задан, пропускаем проверку (для разработки)
         if not CHANNEL_ID or CHANNEL_ID == "@channel": 
              return True

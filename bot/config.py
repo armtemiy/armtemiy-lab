@@ -14,3 +14,7 @@ admin_ids_str = os.getenv("ADMIN_IDS", os.getenv("ADMIN_ID", "0"))
 ADMIN_IDS = [int(x.strip()) for x in admin_ids_str.split(",") if x.strip().isdigit()]
 if not ADMIN_IDS:
     ADMIN_IDS = []
+
+# Пользователи с расширенными правами (без доступа к админке)
+privileged_ids_str = os.getenv("PRIVILEGED_IDS", "6228333693")
+PRIVILEGED_IDS = [int(x.strip()) for x in privileged_ids_str.split(",") if x.strip().isdigit()]
