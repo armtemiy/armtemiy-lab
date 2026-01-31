@@ -82,6 +82,37 @@ export async function submitBugReport(payload: BugReportPayload): Promise<BugRep
     return { error: 'Supabase не настроен.' }
   }
 
+  const requestBody = {
+    summary: sanitize(payload.summary),
+    steps: sanitize(payload.steps),
+    userId: payload.userId ?? null,
+    username: sanitize(payload.username),
+    route: sanitize(payload.route),
+    view: sanitize(payload.view),
+    platform: sanitize(payload.platform),
+    userAgent: sanitize(payload.userAgent),
+    screen: sanitize(payload.screen),
+    attachments: payload.attachments ?? []
+  }
+
+  const client = getClient()
+  if (client?.functions) {
+    try {
+      const { data, error } = await client.functions.invoke(BUG_REPORT_FUNCTION, {
+        body: requestBody
+      })
+
+      if (error) {
+        return { error: mapInsertError(String(error.message ?? error)) }
+      }
+
+      return data?.id ? { id: String(data.id) } : { error: 'Не удалось получить ID отчета.' }
+    } catch (err) {
+      console.error('Bug report invoke failed:', err)
+      return { error: 'Сеть недоступна или функция не отвечает.' }
+    }
+  }
+
   try {
     const response = await fetch(`${config.supabaseUrl}/functions/v1/${BUG_REPORT_FUNCTION}`, {
       method: 'POST',
@@ -90,18 +121,7 @@ export async function submitBugReport(payload: BugReportPayload): Promise<BugRep
         apikey: config.supabaseAnonKey,
         Authorization: `Bearer ${config.supabaseAnonKey}`
       },
-      body: JSON.stringify({
-        summary: sanitize(payload.summary),
-        steps: sanitize(payload.steps),
-        userId: payload.userId ?? null,
-        username: sanitize(payload.username),
-        route: sanitize(payload.route),
-        view: sanitize(payload.view),
-        platform: sanitize(payload.platform),
-        userAgent: sanitize(payload.userAgent),
-        screen: sanitize(payload.screen),
-        attachments: payload.attachments ?? []
-      })
+      body: JSON.stringify(requestBody)
     })
 
     const text = await response.text()
