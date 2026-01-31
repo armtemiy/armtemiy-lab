@@ -1,7 +1,7 @@
 import { supabase } from './supabase'
 import { config } from './config'
 
-const BUG_REPORT_TABLE = 'bug_reports'
+const BUG_REPORT_TABLE = 'public.bug_reports'
 const BUG_REPORT_BUCKET = 'bug-reports'
 const BUG_REPORT_FUNCTION = 'bug-report-notify'
 const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024
@@ -69,13 +69,13 @@ export type BugReportResult = { id?: string; error?: string }
 
 const mapInsertError = (message: string) => {
   const lower = message.toLowerCase()
-  if (lower.includes('bug_reports')) {
-    return 'Не найдена таблица bug_reports. Проверьте миграцию.'
+  if (lower.includes('schema cache') || lower.includes('relation')) {
+    return 'Схема не обновилась. Проверьте миграцию и обновите schema cache.'
   }
   if (lower.includes('permission') || lower.includes('rls')) {
     return 'Нет прав на сохранение. Проверьте RLS политики.'
   }
-  return 'Не удалось отправить. Попробуйте позже.'
+  return message
 }
 
 export async function submitBugReport(payload: BugReportPayload): Promise<BugReportResult> {
