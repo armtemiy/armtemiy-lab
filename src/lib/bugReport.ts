@@ -65,9 +65,22 @@ export async function uploadBugAttachments(files: File[], userId?: number): Prom
   return uploads
 }
 
-export async function submitBugReport(payload: BugReportPayload): Promise<string | null> {
+export type BugReportResult = { id?: string; error?: string }
+
+const mapInsertError = (message: string) => {
+  const lower = message.toLowerCase()
+  if (lower.includes('bug_reports')) {
+    return 'Не найдена таблица bug_reports. Проверьте миграцию.'
+  }
+  if (lower.includes('permission') || lower.includes('rls')) {
+    return 'Нет прав на сохранение. Проверьте RLS политики.'
+  }
+  return 'Не удалось отправить. Попробуйте позже.'
+}
+
+export async function submitBugReport(payload: BugReportPayload): Promise<BugReportResult> {
   const client = getClient()
-  if (!client) return null
+  if (!client) return { error: 'Supabase не настроен.' }
 
   const { data, error } = await client
     .from(BUG_REPORT_TABLE)
@@ -88,7 +101,7 @@ export async function submitBugReport(payload: BugReportPayload): Promise<string
 
   if (error) {
     console.error('Bug report insert failed:', error)
-    return null
+    return { error: mapInsertError(error.message) }
   }
 
   const reportId = data?.id as string | undefined
@@ -98,7 +111,7 @@ export async function submitBugReport(payload: BugReportPayload): Promise<string
     })
   }
 
-  return reportId ?? null
+  return reportId ? { id: reportId } : { error: 'Не удалось получить ID отчета.' }
 }
 
 async function notifyBugReport(payload: BugReportPayload & { id: string }) {

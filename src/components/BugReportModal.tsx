@@ -72,14 +72,14 @@ export function BugReportModal({ open, onClose, context }: BugReportModalProps) 
         attachments: attachmentUrls
       }
 
-      const reportId = await submitBugReport(payload)
-      if (!reportId) {
-        setError('Не удалось отправить. Попробуйте позже.')
+      const result = await submitBugReport(payload)
+      if (!result.id) {
+        setError(result.error || 'Не удалось отправить. Попробуйте позже.')
         return
       }
 
       localStorage.setItem(RATE_LIMIT_KEY, String(Date.now()))
-      setSuccess(`Репорт принят. ID: ${reportId}`)
+      setSuccess(`Репорт принят. ID: ${result.id}`)
       setSummary('')
       setSteps('')
       setFiles([])
