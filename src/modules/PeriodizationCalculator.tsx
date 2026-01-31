@@ -40,28 +40,28 @@ const WEEKS: Array<Omit<PlanWeek, 'weight'>> = [
     intensity: 0.8,
     volume: '5×5',
     note: 'Легкая / вводная',
-    rest: 'Отдых 90–120 сек'
+    rest: 'Отдых 1:30–2:00'
   },
   {
     week: 'Неделя 2 — Нагрузка',
     intensity: 0.9,
     volume: '4×4',
     note: 'Средняя',
-    rest: 'Отдых 120–150 сек'
+    rest: 'Отдых 2:30–3:00'
   },
   {
     week: 'Неделя 3 — Пик',
     intensity: 1,
     volume: '3×3',
     note: 'Тяжелая',
-    rest: 'Отдых 150–180 сек'
+    rest: 'Отдых 4:00–5:00'
   },
   {
     week: 'Неделя 4 — Рекорд',
     intensity: 1.05,
     volume: '2–3',
     note: 'Попытка рекорда',
-    rest: 'Отдых 180–240 сек'
+    rest: 'Отдых 6:00–9:00'
   }
 ]
 
