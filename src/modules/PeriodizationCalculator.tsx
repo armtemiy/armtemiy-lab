@@ -16,6 +16,7 @@ type PlanWeek = {
   weight: number | null
   note: string
   rest: string
+  explanation: string
 }
 
 type HistoryEntry = {
@@ -37,35 +38,40 @@ const HISTORY_STORAGE_KEY = 'armtemiy_periodization_history'
 const WEEKS: Array<Omit<PlanWeek, 'weight'>> = [
   {
     week: 'Неделя 1 — Вкатка',
-    intensity: 0.65,
+    intensity: 0.75,
     volume: '5×5',
-    note: 'Легкая / вводная',
-    rest: 'Отдых 1:30–2:00'
+    note: 'Адаптация',
+    rest: 'Отдых 1:30–2:00',
+    explanation: 'W1: Фаза адаптации структуры.'
   },
   {
     week: 'Неделя 2 — Нагрузка',
-    intensity: 0.75,
+    intensity: 0.82,
     volume: '4×4',
-    note: 'Средняя',
-    rest: 'Отдых 2:30–3:00'
+    note: 'Уплотнение',
+    rest: 'Отдых 2:30–3:00',
+    explanation: 'W2: Накопление потенциала.'
   },
   {
     week: 'Неделя 3 — Пик',
-    intensity: 0.85,
+    intensity: 0.88,
     volume: '3×3',
-    note: 'Тяжелая',
-    rest: 'Отдых 4:00–5:00'
+    note: 'Интенсификация',
+    rest: 'Отдых 4:00–5:00',
+    explanation: 'W3: Системная интенсификация.'
   },
   {
     week: 'Неделя 4 — Рекорд',
-    intensity: 0.95,
-    volume: '1×2–3',
-    note: 'Контрольный подход',
-    rest: 'Отдых 6:00–9:00'
+    intensity: 0.94,
+    volume: '2×2',
+    note: 'Пик',
+    rest: 'Отдых 6:00–9:00',
+    explanation: 'W4: Выход на пик вектора.'
   }
 ]
 
 const roundWeight = (value: number) => Math.round(value * 2) / 2
+const calculateOneRepMax = (fiveRepMax: number) => fiveRepMax * (1 + 5 / 30)
 
 export function PeriodizationCalculator({ onExit }: PeriodizationCalculatorProps) {
   const [exercise, setExercise] = useState(EXERCISES[0].value)
@@ -87,10 +93,10 @@ export function PeriodizationCalculator({ onExit }: PeriodizationCalculatorProps
 
   const plan = useMemo<PlanWeek[]>(() => {
     const numericWeight = typeof weight === 'number' ? weight : null
-    const trainingMax = numericWeight ? numericWeight * 0.9 : null
+    const oneRepMax = numericWeight ? calculateOneRepMax(numericWeight) : null
     return WEEKS.map((week) => ({
       ...week,
-      weight: trainingMax ? roundWeight(trainingMax * week.intensity) : null
+      weight: oneRepMax ? roundWeight(oneRepMax * week.intensity) : null
     }))
   }, [weight])
 
@@ -138,10 +144,13 @@ export function PeriodizationCalculator({ onExit }: PeriodizationCalculatorProps
 
       <p className="mt-4 text-sm text-muted">
         Введите максимальный вес на 5 повторений в одном подходе (5RM). План рассчитан на 4 недели и
-        использует тренировочный максимум 90% от 5RM.
+        строится от расчетного 1RM по формуле Эпли.
       </p>
       <p className="mt-2 text-xs text-faint">
-        Формат 5×5 означает 5 подходов по 5 повторений. Формат 1×2–3 — один контрольный подход на 2–3 повторения.
+        Формат 5×5 означает 5 подходов по 5 повторений. Формат 2×2 — 2 подхода по 2 повторения.
+      </p>
+      <p className="mt-2 text-xs text-faint">
+        Дисклеймер: будь осторожен. Система не гарантирует результат при отсутствии техники.
       </p>
 
       <div className="mt-6 grid gap-4">
@@ -183,7 +192,7 @@ export function PeriodizationCalculator({ onExit }: PeriodizationCalculatorProps
         </p>
         {typeof weight === 'number' && (
           <p className="mt-1 text-xs text-faint">
-            5RM: {weight} кг · Тренировочный максимум: {roundWeight(weight * 0.9)} кг
+            5RM: {weight} кг · 1RM (Эпли): {roundWeight(calculateOneRepMax(weight))} кг
           </p>
         )}
         <p className="mt-2 text-xs text-faint">
@@ -197,6 +206,7 @@ export function PeriodizationCalculator({ onExit }: PeriodizationCalculatorProps
                   <p className="text-sm font-semibold text-[color:var(--text-primary)]">{week.week}</p>
                   <p className="text-xs text-muted">{week.note}</p>
                   <p className="text-xs text-faint">{week.rest}</p>
+                  <p className="text-xs text-faint">{week.explanation}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-semibold text-[color:var(--accent)]">
