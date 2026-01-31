@@ -1,10 +1,12 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
 type Payload = {
-  id: string
+  id?: string
   summary: string
   steps?: string
   userId?: number
@@ -13,6 +15,8 @@ type Payload = {
   view?: string
   platform?: string
   attachments?: string[]
+  userAgent?: string
+  screen?: string
 }
 
 const getEnv = (key: string) => Deno.env.get(key) || ''
@@ -26,7 +30,7 @@ Deno.serve(async (req) => {
   try {
     const body = (await req.json()) as Payload
 
-    if (!body?.id || !body?.summary) {
+    if (!body?.summary) {
       return new Response(JSON.stringify({ error: 'Invalid payload' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -35,19 +39,48 @@ Deno.serve(async (req) => {
 
     const botToken = getEnv('TG_BOT_TOKEN')
     const adminChatId = getEnv('TG_ADMIN_CHAT_ID')
+    const supabaseUrl = getEnv('SB_URL')
+    const serviceKey = getEnv('SB_SERVICE_ROLE_KEY')
 
-    if (!botToken || !adminChatId) {
+    if (!botToken || !adminChatId || !supabaseUrl || !serviceKey) {
       return new Response(JSON.stringify({ error: 'Missing env' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
+    const supabase = createClient(supabaseUrl, serviceKey)
     const attachments = Array.isArray(body.attachments) ? body.attachments.slice(0, 5) : []
+
+    const { data: inserted, error: insertError } = await supabase
+      .from('bug_reports')
+      .insert({
+        summary: body.summary,
+        steps: body.steps ?? null,
+        user_id: body.userId ? String(body.userId) : null,
+        username: body.username ?? null,
+        route: body.route ?? null,
+        view: body.view ?? null,
+        platform: body.platform ?? null,
+        user_agent: body.userAgent ?? null,
+        screen: body.screen ?? null,
+        attachments,
+      })
+      .select('id')
+      .single()
+
+    if (insertError) {
+      return new Response(JSON.stringify({ error: insertError.message }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const reportId = inserted?.id ?? body.id ?? 'unknown'
 
     const textLines = [
       '🐞 Новый баг-репорт',
-      `ID: ${body.id}`,
+      `ID: ${reportId}`,
       `User: ${body.username ? '@' + body.username : '—'} (${body.userId ?? '—'})`,
       `Route: ${clamp(body.route, 120) || '—'}`,
       `View: ${clamp(body.view, 120) || '—'}`,
@@ -83,7 +116,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    return new Response(JSON.stringify({ ok: true }), {
+    return new Response(JSON.stringify({ ok: true, id: reportId }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

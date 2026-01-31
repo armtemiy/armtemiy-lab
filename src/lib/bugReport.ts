@@ -79,54 +79,36 @@ const mapInsertError = (message: string) => {
 }
 
 export async function submitBugReport(payload: BugReportPayload): Promise<BugReportResult> {
-  const client = getClient()
-  if (!client) return { error: 'Supabase не настроен.' }
-
-  const attachments = payload.attachments && payload.attachments.length > 0 ? payload.attachments : null
-
-  const { data, error } = await client
-    .schema('public')
-    .from(BUG_REPORT_TABLE)
-    .insert({
-      summary: sanitize(payload.summary),
-      steps: sanitize(payload.steps),
-      user_id: payload.userId ? String(payload.userId) : null,
-      username: sanitize(payload.username),
-      route: sanitize(payload.route),
-      view: sanitize(payload.view),
-      platform: sanitize(payload.platform),
-      user_agent: sanitize(payload.userAgent),
-      screen: sanitize(payload.screen),
-      attachments,
-    })
-    .select('id')
-    .single()
-
-  if (error) {
-    console.error('Bug report insert failed:', error)
-    return { error: mapInsertError(error.message) }
+  if (!config.supabaseUrl || !config.supabaseAnonKey) {
+    return { error: 'Supabase не настроен.' }
   }
 
-  const reportId = data?.id as string | undefined
-  if (reportId) {
-    notifyBugReport({ ...payload, id: reportId }).catch((err) => {
-      console.warn('Bug report notify failed:', err)
-    })
-  }
-
-  return reportId ? { id: reportId } : { error: 'Не удалось получить ID отчета.' }
-}
-
-async function notifyBugReport(payload: BugReportPayload & { id: string }) {
-  if (!config.supabaseUrl || !config.supabaseAnonKey) return
-
-  await fetch(`${config.supabaseUrl}/functions/v1/${BUG_REPORT_FUNCTION}`, {
+  const response = await fetch(`${config.supabaseUrl}/functions/v1/${BUG_REPORT_FUNCTION}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       apikey: config.supabaseAnonKey,
       Authorization: `Bearer ${config.supabaseAnonKey}`
     },
-    body: JSON.stringify(payload)
+    body: JSON.stringify({
+      summary: sanitize(payload.summary),
+      steps: sanitize(payload.steps),
+      userId: payload.userId ?? null,
+      username: sanitize(payload.username),
+      route: sanitize(payload.route),
+      view: sanitize(payload.view),
+      platform: sanitize(payload.platform),
+      userAgent: sanitize(payload.userAgent),
+      screen: sanitize(payload.screen),
+      attachments: payload.attachments ?? []
+    })
   })
+
+  const json = await response.json().catch(() => null)
+  if (!response.ok) {
+    const message = json?.error ? String(json.error) : 'Не удалось отправить. Попробуйте позже.'
+    return { error: mapInsertError(message) }
+  }
+
+  return json?.id ? { id: String(json.id) } : { error: 'Не удалось получить ID отчета.' }
 }
