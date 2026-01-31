@@ -28,7 +28,7 @@ export function BugReportModal({ open, onClose, context }: BugReportModalProps) 
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
-  const canSend = summary.trim().length >= 10
+  const canSend = summary.trim().length >= 3
   const lastSent = useMemo(() => {
     const raw = localStorage.getItem(RATE_LIMIT_KEY)
     return raw ? Number(raw) : 0
@@ -50,7 +50,7 @@ export function BugReportModal({ open, onClose, context }: BugReportModalProps) 
       return
     }
     if (!canSend) {
-      setError('Опишите проблему (минимум 10 символов).')
+      setError('Опишите проблему (минимум 3 символа).')
       return
     }
 
